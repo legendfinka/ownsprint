@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import request, { type Response } from 'supertest';
-import type { AuthResponse, ProjectSummary, RegisterInput } from '@ownsprint/shared';
+import type { AuthResponse, ProjectSummary, RegisterInput, Sprint, Task } from '@ownsprint/shared';
 
 // Header for an authenticated request: `.set(auth(token))`.
 export function auth(accessToken: string) {
@@ -36,4 +36,32 @@ export async function registerUser(app: Express, overrides: Partial<RegisterInpu
 export async function createProject(app: Express, token: string, name = 'Test Project') {
   const res = await request(app).post('/projects').set(auth(token)).send({ name }).expect(201);
   return res.body as ProjectSummary;
+}
+
+export async function createSprint(
+  app: Express,
+  token: string,
+  projectId: string,
+  body: object = {},
+) {
+  const res = await request(app)
+    .post(`/projects/${projectId}/sprints`)
+    .set(auth(token))
+    .send({ name: 'Sprint 1', startDate: '2026-11-16', endDate: '2026-11-29', ...body })
+    .expect(201);
+  return res.body as Sprint;
+}
+
+export async function createTask(
+  app: Express,
+  token: string,
+  projectId: string,
+  body: object = {},
+) {
+  const res = await request(app)
+    .post(`/projects/${projectId}/tasks`)
+    .set(auth(token))
+    .send({ title: 'A task', ...body })
+    .expect(201);
+  return res.body as Task;
 }

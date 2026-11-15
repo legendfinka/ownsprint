@@ -27,6 +27,10 @@ export async function requireAccess(
   return membership;
 }
 
+export async function isMember(projectId: string, userId: string): Promise<boolean> {
+  return (await repo.findMembership(projectId, userId)) !== null;
+}
+
 export async function createProject(
   userId: string,
   input: ProjectNameInput,

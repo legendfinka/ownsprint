@@ -16,6 +16,13 @@ export class ValidationError extends AppError {
   constructor(details?: unknown) {
     super(400, 'VALIDATION_ERROR', 'Invalid request', details);
   }
+
+  // Same `details` shape as Zod errors from the validate middleware:
+  // ValidationError.fields({ endDate: 'Must be after start date' })
+  static fields(errors: Record<string, string>): ValidationError {
+    const fieldErrors = Object.fromEntries(Object.entries(errors).map(([k, v]) => [k, [v]]));
+    return new ValidationError({ body: { formErrors: [], fieldErrors } });
+  }
 }
 
 export class UnauthorizedError extends AppError {
