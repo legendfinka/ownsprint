@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Dependencies allowed to run install scripts (pnpm blocks all others).
+allowBuilds:
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+
+# Versions shared by several workspaces live here so they cannot drift apart.
+catalog:
+  '@types/node': ^24.0.0
+  typescript: ~6.0.3
+  zod: ^4.6.7
