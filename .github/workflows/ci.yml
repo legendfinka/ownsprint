@@ -12,9 +12,28 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ownsprint
+          POSTGRES_PASSWORD: ownsprint
+          POSTGRES_DB: ownsprint_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ownsprint -d ownsprint_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     env:
-      # Only used by `prisma generate` (via prisma.config.ts); no database is needed for this job.
+      # Read by prisma.config.ts during `prisma generate`; no query is made with it.
       DATABASE_URL: postgresql://ownsprint:ownsprint@localhost:5432/ownsprint
+      # The database the API tests run against (the service container above).
+      TEST_DATABASE_URL: postgresql://ownsprint:ownsprint@localhost:5432/ownsprint_test
+
     steps:
       - uses: actions/checkout@v5
 
@@ -36,3 +55,7 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      # Applies migrations to the test database, then runs every test.
+      - name: Test
+        run: pnpm test

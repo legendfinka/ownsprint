@@ -85,9 +85,10 @@ ownsprint/
 
 - `pnpm install` — install dependencies (also runs `prisma generate` for the api)
 - `cp apps/api/.env.example apps/api/.env` — first-time local env setup
-- `docker compose up -d` — start Postgres
+- `docker compose up -d` — start Postgres (first start also creates the `ownsprint_test` database)
 - `pnpm dev` — run web (http://localhost:5173) and api (http://localhost:4000) in dev mode
 - `pnpm lint` / `pnpm typecheck` / `pnpm test` — must all pass before committing
+- `pnpm --filter api test:watch` — API tests in watch mode (tests use `ownsprint_test`, never the dev database)
 - `pnpm format` / `pnpm format:check` — Prettier (format check runs in CI)
 - `pnpm --filter api db:migrate` — create/apply migrations (`prisma migrate dev`)
 - `pnpm --filter api db:generate` — regenerate the Prisma client after schema changes
