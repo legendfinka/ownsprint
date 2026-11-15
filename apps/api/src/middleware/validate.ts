@@ -20,7 +20,12 @@ export function validate(schemas: Schemas): RequestHandler {
       const result = schema.safeParse(req[part]);
       if (result.success) {
         // req.query is read-only in Express 5, so redefine it instead of assigning.
-        Object.defineProperty(req, part, { value: result.data, writable: true });
+        Object.defineProperty(req, part, {
+          value: result.data,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
       } else {
         errors[part] = z.flattenError(result.error);
       }
