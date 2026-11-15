@@ -118,3 +118,5 @@ Work in this order. Finish and verify each step (lint, typecheck, tests) before 
 - Before writing code for a step, briefly state the plan and the files you will touch.
 - After each step, explain the key design decisions in 3–5 bullet points so the developer can defend them in a technical interview.
 - Prefer simple, readable solutions over clever ones. No unnecessary dependencies.
+- Never say something works without running lint, typecheck and tests first and showing the result.
+- When something fails, find the root cause before changing code. No guess-and-retry fixes.
