@@ -1,6 +1,11 @@
 import type { Express } from 'express';
 import request, { type Response } from 'supertest';
-import type { AuthResponse, RegisterInput } from '@ownsprint/shared';
+import type { AuthResponse, ProjectSummary, RegisterInput } from '@ownsprint/shared';
+
+// Header for an authenticated request: `.set(auth(token))`.
+export function auth(accessToken: string) {
+  return { Authorization: `Bearer ${accessToken}` };
+}
 
 // Full Set-Cookie header of the refresh token, if the response set one.
 export function getRefreshSetCookie(res: Response): string | undefined {
@@ -24,5 +29,11 @@ export async function registerUser(app: Express, overrides: Partial<RegisterInpu
     ...overrides,
   };
   const res = await request(app).post('/auth/register').send(input).expect(201);
-  return { input, body: res.body as AuthResponse, refreshCookie: getRefreshCookie(res) };
+  const body = res.body as AuthResponse;
+  return { input, body, token: body.accessToken, refreshCookie: getRefreshCookie(res) };
+}
+
+export async function createProject(app: Express, token: string, name = 'Test Project') {
+  const res = await request(app).post('/projects').set(auth(token)).send({ name }).expect(201);
+  return res.body as ProjectSummary;
 }

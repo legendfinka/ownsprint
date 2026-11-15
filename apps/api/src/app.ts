@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { createAuthRouter } from './modules/auth/auth.routes';
+import { projectsRouter } from './modules/projects/projects.routes';
 
 // Kept separate from server.ts so tests can use the app without opening a port.
 export function createApp({ authRateLimitMax = env.AUTH_RATE_LIMIT_MAX } = {}): Express {
@@ -16,6 +17,7 @@ export function createApp({ authRateLimitMax = env.AUTH_RATE_LIMIT_MAX } = {}): 
     res.json({ status: 'ok' });
   });
   app.use('/auth', createAuthRouter(authRateLimitMax));
+  app.use('/projects', projectsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
