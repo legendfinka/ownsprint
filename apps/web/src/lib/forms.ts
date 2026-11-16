@@ -17,39 +17,43 @@ interface Schema<T> {
 }
 
 // Checks a submitted form with a shared schema (the same one the API uses)
-// and calls onSubmit with the parsed data. Field errors from the schema, or
-// from the API if onSubmit's promise is rejected, show up in `errors`.
+// and calls onValid with the parsed data. If onValid fails, the API's field
+// errors go under their fields, anything else (e.g. "Email already taken")
+// into `formError`.
 export function useSchemaForm<T>(
   schema: Schema<T>,
   onValid: (data: T, form: HTMLFormElement) => Promise<unknown>,
 ) {
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string>();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const result = schema.safeParse(readForm(form));
-    if (!result.success) {
-      setErrors(firstErrors(result.error.issues));
-      return;
-    }
-    setErrors({});
-    onValid(result.data, form).catch((error: unknown) => setErrors(fromApiError(error)));
+    setErrors(result.success ? {} : firstErrors(result.error.issues));
+    setFormError(undefined);
+    if (!result.success) return;
+
+    onValid(result.data, form).catch((error: unknown) => {
+      const fieldErrors = fromApiError(error);
+      setErrors(fieldErrors);
+      if (Object.keys(fieldErrors).length === 0) {
+        setFormError(error instanceof Error ? error.message : 'Something went wrong');
+      }
+    });
   }
 
-  return { errors, onSubmit };
+  return { errors, formError, onSubmit };
 }
 
 function fromApiError(error: unknown): FieldErrors {
   if (!(error instanceof ApiError)) return {};
   const details = error.details as
-    { body?: { fieldErrors?: Record<string, string[]> } } | undefined;
-  return Object.fromEntries(
-    Object.entries(details?.body?.fieldErrors ?? {}).map(([field, messages]) => [
-      field,
-      messages[0],
-    ]),
-  );
+    | { body?: { fieldErrors?: Record<string, string[]> } }
+    | undefined;
+  const fields = Object.entries(details?.body?.fieldErrors ?? {});
+  return Object.fromEntries(fields.map(([field, messages]) => [field, messages[0]]));
 }
 
 function firstErrors(issues: Issue[]): FieldErrors {

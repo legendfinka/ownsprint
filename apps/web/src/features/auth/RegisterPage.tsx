@@ -11,11 +11,10 @@ export function RegisterPage() {
   const register = useRegister();
   const navigate = useNavigate();
 
-  const { errors, onSubmit } = useSchemaForm(registerSchema, async (input) => {
+  const { errors, formError, onSubmit } = useSchemaForm(registerSchema, async (input) => {
     await register.mutateAsync(input);
     await navigate('/projects', { replace: true });
   });
-  const hasFieldErrors = Object.keys(errors).length > 0;
 
   return (
     <AuthCard title="Create an account" description="Start planning sprints in a minute.">
@@ -35,8 +34,7 @@ export function RegisterPage() {
           autoComplete="new-password"
           error={errors.password}
         />
-        {/* General errors only (e.g. email taken); field errors show under their field. */}
-        {!hasFieldErrors && <ErrorText>{register.error?.message}</ErrorText>}
+        <ErrorText>{formError}</ErrorText>
         <Button type="submit" disabled={register.isPending}>
           {register.isPending ? 'Creating account…' : 'Sign up'}
         </Button>

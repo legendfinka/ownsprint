@@ -13,7 +13,7 @@ export function LoginPage() {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/projects';
 
-  const { errors, onSubmit } = useSchemaForm(loginSchema, async (input) => {
+  const { errors, formError, onSubmit } = useSchemaForm(loginSchema, async (input) => {
     await login.mutateAsync(input);
     await navigate(from, { replace: true });
   });
@@ -35,7 +35,7 @@ export function LoginPage() {
           autoComplete="current-password"
           error={errors.password}
         />
-        <ErrorText>{login.error?.message}</ErrorText>
+        <ErrorText>{formError}</ErrorText>
         <Button type="submit" disabled={login.isPending}>
           {login.isPending ? 'Logging in…' : 'Log in'}
         </Button>
