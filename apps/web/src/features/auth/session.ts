@@ -39,13 +39,15 @@ export function useRegister() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api<void>('/auth/logout', { method: 'POST' }),
-    // Log out locally even if the request failed.
-    onSettled: () => {
+    // Log out locally right away; the request only revokes the refresh cookie.
+    onMutate: () => {
       setAccessToken(null);
-      queryClient.clear(); // drop every cached response of this user
-      queryClient.setQueryData(sessionKey, null);
+      queryClient.setQueryData(sessionKey, null); // AuthGate sees this and opens /login
+      // Drop this user's cached data. Not clear(): it would also remove the
+      // session query the page is watching, so the page would miss the logout.
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionKey[0] });
     },
+    mutationFn: () => api<void>('/auth/logout', { method: 'POST' }),
   });
 }
 
