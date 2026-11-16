@@ -7,6 +7,7 @@ import {
 } from '@ownsprint/shared';
 import { authenticate } from '../../middleware/authenticate';
 import { validate } from '../../middleware/validate';
+import * as tasks from '../tasks/tasks.controller';
 import * as sprints from './sprints.controller';
 
 // Mounted at /projects/:projectId/sprints. mergeParams keeps :projectId visible here.
@@ -25,4 +26,6 @@ sprintsRouter.patch(
   validate({ params: sprintParamsSchema, body: updateSprintSchema }),
   sprints.update,
 );
+// The sprint's board. Its tasks are served by the tasks module.
+sprintsRouter.get('/:sprintId/board', validate({ params: sprintParamsSchema }), tasks.board);
 sprintsRouter.delete('/:sprintId', validate({ params: sprintParamsSchema }), sprints.remove);

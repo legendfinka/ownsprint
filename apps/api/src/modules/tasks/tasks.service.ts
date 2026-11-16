@@ -1,5 +1,7 @@
 import type {
+  BoardResponse,
   CreateTaskInput,
+  MoveTaskInput,
   Page,
   Task,
   TaskDetail,
@@ -64,6 +66,32 @@ export async function updateTask(
   return toTask(await repo.update(taskId, { ...input, position }));
 }
 
+export async function getBoard(
+  userId: string,
+  projectId: string,
+  sprintId: string,
+): Promise<BoardResponse> {
+  await requireAccess(userId, projectId);
+  if (!(await sprintExists(projectId, sprintId))) throw new NotFoundError('Sprint not found');
+  return { tasks: (await repo.findBoard(projectId, sprintId)).map(toTask) };
+}
+
+// Drag-and-drop: puts the card into `status`, right below `afterId`.
+export async function moveTask(
+  userId: string,
+  projectId: string,
+  taskId: string,
+  input: MoveTaskInput,
+): Promise<Task> {
+  await requireAccess(userId, projectId);
+  const task = await getOwnTask(projectId, taskId);
+  if (task.parentId) throw ValidationError.fields({ taskId: 'Subtasks are not on the board' });
+
+  const column = { projectId, sprintId: task.sprintId, status: input.status };
+  const position = await positionBelow(column, taskId, input.afterId);
+  return toTask(await repo.update(taskId, { status: input.status, position }));
+}
+
 export async function deleteTask(userId: string, projectId: string, taskId: string): Promise<void> {
   await requireAccess(userId, projectId);
   await getOwnTask(projectId, taskId);
@@ -95,6 +123,35 @@ async function checkReferences(
   else if (parent?.parentId) errors.parentId = 'Subtasks cannot have their own subtasks';
 
   if (Object.keys(errors).length > 0) throw ValidationError.fields(errors);
+}
+
+const GAP = 1000;
+const MIN_GAP = 1e-6; // far above float precision, so midpoints stay distinct
+
+// A position between the card above and the card below the drop spot, so
+// only the moved card changes. When the gap gets too small (after many
+// drops in the same spot), the column is renumbered first.
+async function positionBelow(
+  column: repo.Column,
+  taskId: string,
+  afterId: string | null,
+): Promise<number> {
+  const cards = await repo.findColumn(column, taskId);
+  const index = afterId === null ? 0 : cards.findIndex((card) => card.id === afterId) + 1;
+  if (afterId !== null && index === 0) {
+    throw ValidationError.fields({ afterId: 'Must be a card in the target column' });
+  }
+
+  const above = cards[index - 1];
+  const below = cards[index];
+  if (above && below) {
+    if (below.position - above.position >= MIN_GAP) return (above.position + below.position) / 2;
+    await repo.renumber(cards.map((card) => card.id));
+    return (index + 0.5) * GAP; // halfway between the renumbered neighbours
+  }
+  if (above) return above.position + GAP;
+  if (below) return below.position - GAP;
+  return GAP;
 }
 
 function toTask(task: TaskRow): Task {

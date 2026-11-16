@@ -42,6 +42,36 @@ export async function findPage(projectId: string, query: TaskQuery) {
   return { items, total };
 }
 
+// Board cards are top-level tasks; subtasks live inside their parent.
+export function findBoard(projectId: string, sprintId: string) {
+  return prisma.task.findMany({
+    where: { projectId, sprintId, parentId: null },
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
+  });
+}
+
+export interface Column {
+  projectId: string;
+  sprintId: string | null;
+  status: TaskStatus;
+}
+
+// The cards of one column in order, without the card being moved.
+export function findColumn(column: Column, exceptId: string) {
+  return prisma.task.findMany({
+    where: { ...column, parentId: null, id: { not: exceptId } },
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
+    select: { id: true, position: true },
+  });
+}
+
+// Spreads the cards out again (1000, 2000, …) in one transaction.
+export async function renumber(ids: string[]) {
+  await prisma.$transaction(
+    ids.map((id, i) => prisma.task.update({ where: { id }, data: { position: (i + 1) * 1000 } })),
+  );
+}
+
 // A board column is "sprint (or backlog) + status". New cards go to its bottom.
 export async function nextPosition(projectId: string, sprintId: string | null, status: TaskStatus) {
   const { _max } = await prisma.task.aggregate({

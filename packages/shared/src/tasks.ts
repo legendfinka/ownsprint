@@ -34,6 +34,14 @@ export const updateTaskSchema = z
   .refine((input) => Object.keys(input).length > 0, 'Nothing to update');
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
+// Drag-and-drop on the board: the target column and the card to land below
+// (null = top of the column). The server works out the position itself.
+export const moveTaskSchema = z.object({
+  status: taskStatusSchema,
+  afterId: z.uuid().nullable(),
+});
+export type MoveTaskInput = z.infer<typeof moveTaskSchema>;
+
 export const taskQuerySchema = z.object({
   q: z.string().trim().min(1).max(100).optional(),
   status: taskStatusSchema.optional(),
@@ -63,6 +71,11 @@ export interface Task {
 
 export interface TaskDetail extends Task {
   subtasks: Task[];
+}
+
+// All top-level tasks of one sprint, sorted by position.
+export interface BoardResponse {
+  tasks: Task[];
 }
 
 export interface Page<T> {
