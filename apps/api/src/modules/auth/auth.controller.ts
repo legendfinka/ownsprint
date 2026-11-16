@@ -16,7 +16,7 @@ const cookieOptions: CookieOptions = {
   httpOnly: true, // JavaScript can't read it, so XSS can't steal it
   secure: env.NODE_ENV === 'production', // HTTPS only
   sameSite: 'strict', // not sent from other sites (CSRF)
-  path: '/auth', // only sent to auth endpoints
+  path: '/api/auth', // only sent to auth endpoints
 };
 
 // req.body is already checked by `validate` in auth.routes.ts.

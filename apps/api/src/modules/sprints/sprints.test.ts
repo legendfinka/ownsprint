@@ -10,7 +10,7 @@ const errorCode = (res: request.Response) => (res.body as ErrorResponse).error.c
 async function setup() {
   const { token } = await registerUser(app);
   const project = await createProject(app, token);
-  return { token, project, url: `/projects/${project.id}/sprints` };
+  return { token, project, url: `/api/projects/${project.id}/sprints` };
 }
 
 describe('sprints', () => {
@@ -76,7 +76,7 @@ describe('sprints', () => {
     await request(app).delete(`${url}/${sprint.id}`).set(auth(token)).expect(204);
 
     const res = await request(app)
-      .get(`/projects/${project.id}/tasks/${task.id}`)
+      .get(`/api/projects/${project.id}/tasks/${task.id}`)
       .set(auth(token))
       .expect(200);
     expect((res.body as TaskDetail).sprintId).toBeNull();
@@ -92,7 +92,7 @@ describe('sprints', () => {
     // The sprint exists, but not in this other project.
     const other = await createProject(app, token, 'Other');
     await request(app)
-      .patch(`/projects/${other.id}/sprints/${sprint.id}`)
+      .patch(`/api/projects/${other.id}/sprints/${sprint.id}`)
       .set(auth(token))
       .send({ name: 'Moved?' })
       .expect(404);

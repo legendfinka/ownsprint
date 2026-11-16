@@ -81,19 +81,18 @@ async function checkReferences(
   projectId: string,
   refs: { assigneeId?: string | null; sprintId?: string | null; parentId?: string | null },
 ): Promise<void> {
-  const errors: Record<string, string> = {};
+  // The three lookups don't depend on each other, so run them in parallel.
+  const [assigneeOk, sprintOk, parent] = await Promise.all([
+    !refs.assigneeId || isMember(projectId, refs.assigneeId),
+    !refs.sprintId || sprintExists(projectId, refs.sprintId),
+    refs.parentId ? repo.find(projectId, refs.parentId) : undefined,
+  ]);
 
-  if (refs.assigneeId && !(await isMember(projectId, refs.assigneeId))) {
-    errors.assigneeId = 'Assignee must be a member of this project';
-  }
-  if (refs.sprintId && !(await sprintExists(projectId, refs.sprintId))) {
-    errors.sprintId = 'Sprint not found in this project';
-  }
-  if (refs.parentId) {
-    const parent = await repo.find(projectId, refs.parentId);
-    if (!parent) errors.parentId = 'Parent task not found in this project';
-    else if (parent.parentId) errors.parentId = 'Subtasks cannot have their own subtasks';
-  }
+  const errors: Record<string, string> = {};
+  if (!assigneeOk) errors.assigneeId = 'Assignee must be a member of this project';
+  if (!sprintOk) errors.sprintId = 'Sprint not found in this project';
+  if (parent === null) errors.parentId = 'Parent task not found in this project';
+  else if (parent?.parentId) errors.parentId = 'Subtasks cannot have their own subtasks';
 
   if (Object.keys(errors).length > 0) throw ValidationError.fields(errors);
 }

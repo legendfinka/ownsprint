@@ -12,13 +12,13 @@ async function setup() {
   const member = await registerUser(app, { email: 'member@example.com' });
   const project = await createProject(app, owner.token);
   await request(app)
-    .post(`/projects/${project.id}/members`)
+    .post(`/api/projects/${project.id}/members`)
     .set(auth(owner.token))
     .send({ email: 'member@example.com' })
     .expect(201);
 
   const { token } = owner;
-  const url = `/projects/${project.id}/tasks`;
+  const url = `/api/projects/${project.id}/tasks`;
   return { token, owner, member, project, url };
 }
 

@@ -28,13 +28,13 @@ export async function registerUser(app: Express, overrides: Partial<RegisterInpu
     name: 'Test User',
     ...overrides,
   };
-  const res = await request(app).post('/auth/register').send(input).expect(201);
+  const res = await request(app).post('/api/auth/register').send(input).expect(201);
   const body = res.body as AuthResponse;
   return { input, body, token: body.accessToken, refreshCookie: getRefreshCookie(res) };
 }
 
 export async function createProject(app: Express, token: string, name = 'Test Project') {
-  const res = await request(app).post('/projects').set(auth(token)).send({ name }).expect(201);
+  const res = await request(app).post('/api/projects').set(auth(token)).send({ name }).expect(201);
   return res.body as ProjectSummary;
 }
 
@@ -45,7 +45,7 @@ export async function createSprint(
   body: object = {},
 ) {
   const res = await request(app)
-    .post(`/projects/${projectId}/sprints`)
+    .post(`/api/projects/${projectId}/sprints`)
     .set(auth(token))
     .send({ name: 'Sprint 1', startDate: '2026-11-16', endDate: '2026-11-29', ...body })
     .expect(201);
@@ -59,7 +59,7 @@ export async function createTask(
   body: object = {},
 ) {
   const res = await request(app)
-    .post(`/projects/${projectId}/tasks`)
+    .post(`/api/projects/${projectId}/tasks`)
     .set(auth(token))
     .send({ title: 'A task', ...body })
     .expect(201);

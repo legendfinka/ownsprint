@@ -13,7 +13,7 @@ const errorCode = (res: request.Response) => (res.body as ErrorResponse).error.c
 describe('POST /auth/register', () => {
   it('creates a user and sets a secure refresh cookie', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ email: ' Alice@Example.COM ', password: 'correct-horse', name: ' Alice ' })
       .expect(201);
 
@@ -25,7 +25,7 @@ describe('POST /auth/register', () => {
     const cookie = getRefreshSetCookie(res);
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/SameSite=Strict/i);
-    expect(cookie).toMatch(/Path=\/auth/i);
+    expect(cookie).toMatch(/Path=\/api\/auth/i);
 
     const user = await prisma.user.findUniqueOrThrow({ where: { email: 'alice@example.com' } });
     expect(user.passwordHash).toMatch(/^\$argon2id\$/);
@@ -35,7 +35,7 @@ describe('POST /auth/register', () => {
     await registerUser(app, { email: 'bob@example.com' });
 
     const res = await request(app)
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ email: 'BOB@example.com', password: 'another-password', name: 'Bob' })
       .expect(409);
 
@@ -44,7 +44,7 @@ describe('POST /auth/register', () => {
 
   it('returns field errors for invalid input', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ email: 'not-an-email', password: 'short', name: '' })
       .expect(400);
 
@@ -60,7 +60,7 @@ describe('POST /auth/login', () => {
     const { input } = await registerUser(app);
 
     const res = await request(app)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ email: input.email.toUpperCase(), password: input.password })
       .expect(200);
 
@@ -71,7 +71,7 @@ describe('POST /auth/login', () => {
   it('answers the same for a wrong password and an unknown email', async () => {
     const { input } = await registerUser(app);
     const login = (email: string) =>
-      request(app).post('/auth/login').send({ email, password: 'wrong-password' }).expect(401);
+      request(app).post('/api/auth/login').send({ email, password: 'wrong-password' }).expect(401);
 
     const wrongPassword = await login(input.email);
     const unknownEmail = await login('nobody@example.com');
@@ -83,7 +83,7 @@ describe('POST /auth/login', () => {
 
 describe('POST /auth/refresh', () => {
   const refresh = (cookie?: string) => {
-    const req = request(app).post('/auth/refresh');
+    const req = request(app).post('/api/auth/refresh');
     return cookie ? req.set('Cookie', cookie) : req;
   };
 
@@ -121,20 +121,23 @@ describe('POST /auth/logout', () => {
   it('revokes the token and clears the cookie', async () => {
     const { refreshCookie } = await registerUser(app);
 
-    const res = await request(app).post('/auth/logout').set('Cookie', refreshCookie).expect(204);
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', refreshCookie)
+      .expect(204);
 
     expect(getRefreshSetCookie(res)).toMatch(/Expires=Thu, 01 Jan 1970/i); // deletes the cookie
-    await request(app).post('/auth/refresh').set('Cookie', refreshCookie).expect(401);
+    await request(app).post('/api/auth/refresh').set('Cookie', refreshCookie).expect(401);
   });
 
   it('works without a cookie too', async () => {
-    await request(app).post('/auth/logout').expect(204);
+    await request(app).post('/api/auth/logout').expect(204);
   });
 });
 
 describe('GET /auth/me', () => {
   const me = (token: string) =>
-    request(app).get('/auth/me').set('Authorization', `Bearer ${token}`);
+    request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
   const sign = (userId: string, secret: string, expiresAt: number) =>
     new SignJWT()
       .setProtectedHeader({ alg: 'HS256' })
@@ -150,7 +153,7 @@ describe('GET /auth/me', () => {
   });
 
   it('rejects missing and malformed tokens', async () => {
-    await request(app).get('/auth/me').expect(401);
+    await request(app).get('/api/auth/me').expect(401);
     await me('not-a-jwt').expect(401);
   });
 
@@ -170,7 +173,9 @@ describe('rate limiting', () => {
   it('returns 429 after too many login attempts', async () => {
     const limitedApp = createApp({ authRateLimitMax: 2 });
     const attempt = () =>
-      request(limitedApp).post('/auth/login').send({ email: 'a@example.com', password: 'guess' });
+      request(limitedApp)
+        .post('/api/auth/login')
+        .send({ email: 'a@example.com', password: 'guess' });
 
     await attempt().expect(401);
     await attempt().expect(401);

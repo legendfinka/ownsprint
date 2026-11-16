@@ -1,5 +1,5 @@
 import cookieParser from 'cookie-parser';
-import express, { type Express } from 'express';
+import express, { Router, type Express } from 'express';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { createAuthRouter } from './modules/auth/auth.routes';
@@ -15,13 +15,17 @@ export function createApp({ authRateLimitMax = env.AUTH_RATE_LIMIT_MAX } = {}): 
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
-  app.get('/health', (_req, res) => {
+  // Everything lives under /api, so the web app can proxy one prefix
+  // and keep its own URLs (like /projects) for pages.
+  const api = Router();
+  api.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
-  app.use('/auth', createAuthRouter(authRateLimitMax));
-  app.use('/projects/:projectId/sprints', sprintsRouter);
-  app.use('/projects/:projectId/tasks', tasksRouter);
-  app.use('/projects', projectsRouter);
+  api.use('/auth', createAuthRouter(authRateLimitMax));
+  api.use('/projects/:projectId/sprints', sprintsRouter);
+  api.use('/projects/:projectId/tasks', tasksRouter);
+  api.use('/projects', projectsRouter);
+  app.use('/api', api);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

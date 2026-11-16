@@ -21,12 +21,12 @@ async function setup() {
   const outsider = await registerUser(app, { email: 'outsider@example.com', name: 'Otto' });
   const project = await createProject(app, owner.token);
   await request(app)
-    .post(`/projects/${project.id}/members`)
+    .post(`/api/projects/${project.id}/members`)
     .set(auth(owner.token))
     .send({ email: 'member@example.com' })
     .expect(201);
 
-  return { owner, member, outsider, project, url: `/projects/${project.id}` };
+  return { owner, member, outsider, project, url: `/api/projects/${project.id}` };
 }
 
 describe('projects', () => {
@@ -34,7 +34,7 @@ describe('projects', () => {
     const { token } = await registerUser(app);
 
     const res = await request(app)
-      .post('/projects')
+      .post('/api/projects')
       .set(auth(token))
       .send({ name: '  Website  ' })
       .expect(201);
@@ -45,8 +45,11 @@ describe('projects', () => {
   it('lists only projects the user belongs to', async () => {
     const { member, outsider, project } = await setup();
 
-    const memberList = await request(app).get('/projects').set(auth(member.token)).expect(200);
-    const outsiderList = await request(app).get('/projects').set(auth(outsider.token)).expect(200);
+    const memberList = await request(app).get('/api/projects').set(auth(member.token)).expect(200);
+    const outsiderList = await request(app)
+      .get('/api/projects')
+      .set(auth(outsider.token))
+      .expect(200);
 
     expect((memberList.body as ProjectListResponse).projects).toEqual([
       expect.objectContaining({ id: project.id, role: 'member' }),
@@ -55,12 +58,12 @@ describe('projects', () => {
   });
 
   it('requires login', async () => {
-    await request(app).get('/projects').expect(401);
+    await request(app).get('/api/projects').expect(401);
   });
 
   it('returns 400 for an invalid project id', async () => {
     const { token } = await registerUser(app);
-    const res = await request(app).get('/projects/not-a-uuid').set(auth(token)).expect(400);
+    const res = await request(app).get('/api/projects/not-a-uuid').set(auth(token)).expect(400);
     expect(errorCode(res)).toBe('VALIDATION_ERROR');
   });
 });
