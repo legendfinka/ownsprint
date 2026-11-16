@@ -13,7 +13,7 @@ interface Props extends ComponentProps<'input'> {
 export function FormField({ name, label, error, ...inputProps }: Props) {
   const errorId = `${name}-error`;
   return (
-    <div className="grid gap-2">
+    <div className="grid content-start gap-2">
       <Label htmlFor={name}>{label}</Label>
       <Input
         id={name}
