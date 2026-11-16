@@ -1,15 +1,27 @@
-import { taskStatusSchema } from '@ownsprint/shared';
+import { Navigate, Route, Routes } from 'react-router';
+import { Layout } from '@/components/Layout';
+import { AuthGate } from '@/features/auth/guards';
+import { LoginPage } from '@/features/auth/LoginPage';
+import { RegisterPage } from '@/features/auth/RegisterPage';
+import { ProjectPage } from '@/features/projects/ProjectPage';
+import { ProjectsPage } from '@/features/projects/ProjectsPage';
 
-// Placeholder until step 5. Importing from @ownsprint/shared proves the workspace wiring.
 export function App() {
   return (
-    <main>
-      <h1>OwnSprint</h1>
-      <ul>
-        {taskStatusSchema.options.map((status) => (
-          <li key={status}>{status}</li>
-        ))}
-      </ul>
-    </main>
+    <Routes>
+      <Route element={<AuthGate allow="guest" />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
+
+      <Route element={<AuthGate allow="user" />}>
+        <Route element={<Layout />}>
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/projects" replace />} />
+    </Routes>
   );
 }

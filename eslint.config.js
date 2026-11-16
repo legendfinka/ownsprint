@@ -45,6 +45,12 @@ export default defineConfig(
     languageOptions: { globals: globals.browser },
   },
 
+  // shadcn components are generated code; some export helpers next to components.
+  {
+    files: ['apps/web/src/components/ui/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+
   // Turns off stylistic rules that would fight with Prettier. Must come last.
   prettier,
 );
