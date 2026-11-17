@@ -42,6 +42,10 @@ describe('dropToMove', () => {
     expect(dropToMove(tasks, 'B', 'done')).toEqual({ taskId: 'B', status: 'done', afterId: null });
   });
 
+  it("lands below the last card of a full column when dropped on the column's bottom", () => {
+    expect(dropToMove(tasks, 'D', 'todo')).toEqual({ taskId: 'D', status: 'todo', afterId: 'C' });
+  });
+
   it('returns null when nothing changes', () => {
     expect(dropToMove(tasks, 'B', 'B')).toBeNull();
     expect(dropToMove(tasks, 'C', 'todo')).toBeNull(); // already last

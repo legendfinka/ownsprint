@@ -8,33 +8,50 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ErrorText } from '@/components/ErrorText';
+import { TaskDialog } from '@/features/tasks/TaskDialog';
 import { AddTaskForm } from './AddTaskForm';
 import { Column } from './Column';
 import { useBoard, useMoveTask } from './queries';
-import { COLUMNS, dropToMove } from './reorder';
+import { COLUMNS, dropToMove, type Move } from './reorder';
 import { TaskCard } from './TaskCard';
 
 export function Board({ projectId, sprintId }: { projectId: string; sprintId: string }) {
   const { data: tasks, isPending, error } = useBoard(projectId, sprintId);
   const moveTask = useMoveTask(projectId, sprintId);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  // Where the dragged card would land right now (null = back where it was).
+  const [preview, setPreview] = useState<Move | null>(null);
   const sensors = useSensors(
     // A small distance, so a click on a card is not a drag.
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    // Only Space lifts a card; Enter is kept for opening it.
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Tab'] },
+    }),
   );
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading board…</p>;
   if (error) return <ErrorText>{error.message}</ErrorText>;
 
-  function onDragEnd({ active, over }: DragEndEvent) {
+  // The same function decides the preview and the drop, so they always agree.
+  const moveFor = ({ active, over }: DragOverEvent) =>
+    tasks && over ? dropToMove(tasks, String(active.id), String(over.id)) : null;
+
+  function onDragEnd(event: DragEndEvent) {
+    const move = moveFor(event);
     setDraggingId(null);
-    if (!tasks || !over) return;
-    const move = dropToMove(tasks, String(active.id), String(over.id));
+    setPreview(null);
     if (move) moveTask.mutate(move);
+  }
+
+  function onDragCancel() {
+    setDraggingId(null);
+    setPreview(null);
   }
 
   const dragging = tasks.find((t) => t.id === draggingId);
@@ -48,8 +65,9 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={({ active }) => setDraggingId(String(active.id))}
+        onDragOver={(event) => setPreview(moveFor(event))}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setDraggingId(null)}
+        onDragCancel={onDragCancel}
       >
         <div className="grid gap-4 md:grid-cols-3">
           {COLUMNS.map(({ status, title }) => (
@@ -58,6 +76,7 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
               status={status}
               title={title}
               tasks={tasks.filter((t) => t.status === status)}
+              dropTarget={preview?.status === status ? preview : undefined}
             >
               {status === 'todo' && <AddTaskForm projectId={projectId} sprintId={sprintId} />}
             </Column>
@@ -66,6 +85,7 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
         {/* The card under the pointer, drawn above every column. */}
         <DragOverlay>{dragging && <TaskCard task={dragging} lifted />}</DragOverlay>
       </DndContext>
+      <TaskDialog projectId={projectId} />
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function dropToMove(tasks: Task[], activeId: string, overId: string): Mov
 
 // The same move on the cached list, so the board updates before the server
 // answers. Columns are read in list order, so no position math is needed here.
-export function applyMove(tasks: Task[], { taskId, status, afterId }: Move): Task[] {
+export function applyMove<T extends Task>(tasks: T[], { taskId, status, afterId }: Move): T[] {
   const task = tasks.find((t) => t.id === taskId);
   if (!task) return tasks;
 

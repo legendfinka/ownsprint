@@ -47,6 +47,14 @@ export function useSchemaForm<T>(
   return { errors, formError, onSubmit };
 }
 
+// One line for an error: the first field error if there is one
+// ("Too big: expected number to be <=100"), else the general message.
+export function errorMessage(error: unknown): string {
+  const [first] = Object.values(fromApiError(error));
+  if (first) return first;
+  return error instanceof Error ? error.message : 'Something went wrong';
+}
+
 function fromApiError(error: unknown): FieldErrors {
   if (!(error instanceof ApiError)) return {};
   const details = error.details as

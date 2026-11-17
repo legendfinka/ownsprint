@@ -138,6 +138,14 @@
     background-image: radial-gradient(var(--dot) 1px, transparent 1px);
     background-size: 18px 18px;
   }
+  /* Tailwind 4 leaves buttons with the default arrow; show the hand instead.
+     Board cards keep their grab cursor (a class beats this base rule). */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary,
+  select {
+    cursor: pointer;
+  }
   h1,
   h2 {
     @apply font-heading;

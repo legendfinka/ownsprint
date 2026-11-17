@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BoardResponse,
+  BoardTask,
   CreateSprintInput,
   CreateTaskInput,
   Sprint,
@@ -67,8 +68,8 @@ export function useMoveTask(projectId: string, sprintId: string) {
     onMutate: async (move) => {
       // Stop a refetch in flight from overwriting the optimistic state.
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Task[]>(queryKey);
-      queryClient.setQueryData<Task[]>(queryKey, (tasks) => tasks && applyMove(tasks, move));
+      const previous = queryClient.getQueryData<BoardTask[]>(queryKey);
+      queryClient.setQueryData<BoardTask[]>(queryKey, (tasks) => tasks && applyMove(tasks, move));
       return { previous };
     },
     onError: (_error, _move, context) => {

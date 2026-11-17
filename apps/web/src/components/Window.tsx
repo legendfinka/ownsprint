@@ -21,7 +21,8 @@ export function Window({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-sm border-2 border-foreground bg-card shadow-hard',
+        // flex-col: the content can grow to fill a stretched window (board columns).
+        'flex flex-col overflow-hidden rounded-sm border-2 border-foreground bg-card shadow-hard',
         className,
       )}
       {...props}

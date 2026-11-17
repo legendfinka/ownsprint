@@ -31,7 +31,8 @@ export function ProjectPage() {
         <h1 className="text-4xl font-semibold">{project.name}</h1>
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_260px]">
+      {/* minmax(0, 1fr): let the board shrink instead of pushing Members off-screen. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
         <SprintBoard projectId={projectId} />
 
         <Window icon={Users} title={`Members (${project.members.length})`}>

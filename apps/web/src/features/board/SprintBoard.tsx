@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router';
 import { createSprintSchema } from '@ownsprint/shared';
 import { ErrorText } from '@/components/ErrorText';
 import { FormField } from '@/components/FormField';
+import { Select } from '@/components/Select';
 import { Window } from '@/components/Window';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useSchemaForm } from '@/lib/forms';
@@ -32,18 +33,18 @@ export function SprintBoard({ projectId }: { projectId: string }) {
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-4">
         {sprint ? (
-          <select
+          <Select
             aria-label="Sprint"
             value={sprint.id}
             onChange={(e) => select(e.target.value)}
-            className="h-8 min-w-0 rounded-sm border-2 bg-card px-2 text-sm font-semibold shadow-hard-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dotted focus-visible:outline-ring"
+            className="w-auto font-semibold"
           >
             {sprints.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} · {s.status}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           <p className="text-sm text-muted-foreground">No sprints yet. Create one to start.</p>
         )}
