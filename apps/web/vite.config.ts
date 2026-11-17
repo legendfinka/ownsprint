@@ -10,6 +10,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // reachable from a phone on the same Wi-Fi (dev only)
     // The browser only talks to this server, so cookies and requests are same-origin.
     proxy: { '/api': 'http://localhost:4000' },
   },
