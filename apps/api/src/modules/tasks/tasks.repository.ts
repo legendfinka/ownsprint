@@ -43,10 +43,12 @@ export async function findPage(projectId: string, query: TaskQuery) {
 }
 
 // Board cards are top-level tasks; subtasks live inside their parent.
+// Only the subtasks' status comes along, for the "2/5" progress on the card.
 export function findBoard(projectId: string, sprintId: string) {
   return prisma.task.findMany({
     where: { projectId, sprintId, parentId: null },
     orderBy: [{ position: 'asc' }, { id: 'asc' }],
+    include: { subtasks: { select: { status: true } } },
   });
 }
 

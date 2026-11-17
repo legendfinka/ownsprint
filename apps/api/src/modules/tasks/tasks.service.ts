@@ -73,7 +73,17 @@ export async function getBoard(
 ): Promise<BoardResponse> {
   await requireAccess(userId, projectId);
   if (!(await sprintExists(projectId, sprintId))) throw new NotFoundError('Sprint not found');
-  return { tasks: (await repo.findBoard(projectId, sprintId)).map(toTask) };
+
+  const tasks = await repo.findBoard(projectId, sprintId);
+  return {
+    tasks: tasks.map(({ subtasks, ...task }) => ({
+      ...toTask(task),
+      subtaskCount: {
+        done: subtasks.filter((s) => s.status === 'done').length,
+        total: subtasks.length,
+      },
+    })),
+  };
 }
 
 // Drag-and-drop: puts the card into `status`, right below `afterId`.

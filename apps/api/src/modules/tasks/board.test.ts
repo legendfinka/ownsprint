@@ -47,6 +47,25 @@ describe('board', () => {
     expect(await columns()).toEqual({ todo: ['A', 'B', 'C'] });
   });
 
+  it('counts done and total subtasks per card', async () => {
+    const { token, project, a, boardUrl } = await setup();
+    await createTask(app, token, project.id, { title: 'One', parentId: a.id });
+    const two = await createTask(app, token, project.id, { title: 'Two', parentId: a.id });
+    await request(app)
+      .patch(`/api/projects/${project.id}/tasks/${two.id}`)
+      .set(auth(token))
+      .send({ status: 'done' })
+      .expect(200);
+
+    const res = await request(app).get(boardUrl).set(auth(token)).expect(200);
+    const counts = (res.body as BoardResponse).tasks.map((t) => [t.title, t.subtaskCount]);
+    expect(counts).toEqual([
+      ['A', { done: 1, total: 2 }],
+      ['B', { done: 0, total: 0 }],
+      ['C', { done: 0, total: 0 }],
+    ]);
+  });
+
   it('hides the board from non-members and 404s an unknown sprint', async () => {
     const { token, project, boardUrl } = await setup();
     const stranger = await registerUser(app, { email: 'stranger@example.com' });

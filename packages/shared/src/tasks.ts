@@ -73,9 +73,14 @@ export interface TaskDetail extends Task {
   subtasks: Task[];
 }
 
+// A board card: the task plus how far along its subtasks are.
+export interface BoardTask extends Task {
+  subtaskCount: { done: number; total: number };
+}
+
 // All top-level tasks of one sprint, sorted by position.
 export interface BoardResponse {
-  tasks: Task[];
+  tasks: BoardTask[];
 }
 
 export interface Page<T> {
