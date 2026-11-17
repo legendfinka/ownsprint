@@ -71,3 +71,13 @@ export function useCreateProject() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
   });
 }
+
+// Owner only. The name shows on this page and in the project list.
+export function useRenameProject(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ProjectNameInput) =>
+      api<ProjectSummary>(`/projects/${projectId}`, { method: 'PATCH', body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+  });
+}

@@ -4,6 +4,7 @@ import { SprintBoard } from '@/features/board/SprintBoard';
 import { TaskList } from '@/features/tasks/TaskList';
 import { cn } from '@/lib/utils';
 import { Members } from './Members';
+import { ProjectTitle } from './ProjectTitle';
 import { useProject } from './queries';
 
 type View = 'board' | 'tasks';
@@ -46,7 +47,7 @@ export function ProjectPage() {
   if (error) {
     return (
       <div className="grid gap-2">
-        <ErrorText>{error.message}</ErrorText>
+        <ErrorText persistent>{error.message}</ErrorText>
         <Link to="/projects" className="text-sm text-primary underline">
           Back to projects
         </Link>
@@ -60,7 +61,7 @@ export function ProjectPage() {
         <Link to="/projects" className="w-fit font-mono text-xs text-primary hover:underline">
           ← all projects
         </Link>
-        <h1 className="text-4xl font-semibold">{project.name}</h1>
+        <ProjectTitle project={project} />
       </div>
 
       {/* minmax(0, 1fr): let the board shrink instead of pushing Members off-screen. */}

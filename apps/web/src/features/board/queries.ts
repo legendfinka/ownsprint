@@ -34,6 +34,16 @@ export function useCreateSprint(projectId: string) {
   });
 }
 
+// Name and dates. The status changes only through start and complete.
+export function useUpdateSprint(projectId: string, sprintId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateSprintInput) =>
+      api<Sprint>(`/projects/${projectId}/sprints/${sprintId}`, { method: 'PATCH', body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: boardKeys.sprints(projectId) }),
+  });
+}
+
 // Starting or completing changes the sprint, and completing moves tasks
 // between boards, so the sprints and all the boards of the project reload.
 function useSprintAction<T = void>(

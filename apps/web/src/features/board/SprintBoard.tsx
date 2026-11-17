@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Popover } from '@base-ui/react/popover';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, Pencil } from 'lucide-react';
 import { useSearchParams } from 'react-router';
-import { createSprintSchema } from '@ownsprint/shared';
+import { createSprintSchema, type CreateSprintInput, type Sprint } from '@ownsprint/shared';
 import { ErrorText } from '@/components/ErrorText';
 import { FormField } from '@/components/FormField';
 import { Select } from '@/components/Select';
@@ -12,7 +12,7 @@ import { SprintSummary } from '@/features/ai/SprintSummary';
 import { useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
 import { Board } from './Board';
-import { useCreateSprint, useSprints } from './queries';
+import { useCreateSprint, useSprints, useUpdateSprint } from './queries';
 import { SprintActions } from './SprintActions';
 
 // Sprint picker + the board of the chosen sprint. The choice lives in the
@@ -22,7 +22,7 @@ export function SprintBoard({ projectId, isOwner }: { projectId: string; isOwner
   const [params, setParams] = useSearchParams();
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading sprints…</p>;
-  if (error) return <ErrorText>{error.message}</ErrorText>;
+  if (error) return <ErrorText persistent>{error.message}</ErrorText>;
 
   // The sprint from the URL, else the active one, else the first.
   const sprint =
@@ -35,18 +35,22 @@ export function SprintBoard({ projectId, isOwner }: { projectId: string; isOwner
     <div className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         {sprint ? (
-          <Select
-            aria-label="Sprint"
-            value={sprint.id}
-            onChange={(e) => select(e.target.value)}
-            className="w-auto font-semibold"
-          >
-            {sprints.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} · {s.status}
-              </option>
-            ))}
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select
+              aria-label="Sprint"
+              value={sprint.id}
+              onChange={(e) => select(e.target.value)}
+              className="w-auto font-semibold"
+            >
+              {sprints.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {s.status}
+                </option>
+              ))}
+            </Select>
+            {/* keyed: another sprint gets a fresh form. */}
+            <EditSprintButton key={sprint.id} projectId={projectId} sprint={sprint} />
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">No sprints yet. Create one to start.</p>
         )}
@@ -83,34 +87,35 @@ function localDate(daysFromToday = 0): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-interface NewSprintProps {
-  projectId: string;
-  onCreated: (sprintId: string) => void;
+interface PopoverProps {
+  trigger: ReactNode;
+  triggerLabel?: string; // for an icon-only trigger
+  title: string;
+  // The form inside; `close` closes the popover.
+  children: (close: () => void) => ReactNode;
 }
 
 // Base UI's popover closes on an outside click or Escape and handles focus.
-// The form unmounts on close, so it opens empty every time.
-function NewSprintButton({ projectId, onCreated }: NewSprintProps) {
+// The form unmounts on close, so it opens fresh every time.
+function SprintPopover({ trigger, triggerLabel, title, children }: PopoverProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className={cn(buttonVariants({ variant: 'outline' }), 'shrink-0')}>
-        New sprint
+      <Popover.Trigger
+        aria-label={triggerLabel}
+        className={cn(
+          buttonVariants({ variant: 'outline', size: triggerLabel ? 'icon' : 'default' }),
+          'shrink-0',
+        )}
+      >
+        {trigger}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
           <Popover.Popup className="w-72 text-sm outline-none">
-            <Window icon={CalendarPlus} title="New sprint" bar="bg-primary text-primary-foreground">
-              <div className="p-4">
-                <NewSprintForm
-                  projectId={projectId}
-                  onCreated={(sprintId) => {
-                    setOpen(false);
-                    onCreated(sprintId);
-                  }}
-                />
-              </div>
+            <Window icon={CalendarPlus} title={title} bar="bg-primary text-primary-foreground">
+              <div className="p-4">{children(() => setOpen(false))}</div>
             </Window>
           </Popover.Popup>
         </Popover.Positioner>
@@ -119,32 +124,87 @@ function NewSprintButton({ projectId, onCreated }: NewSprintProps) {
   );
 }
 
-function NewSprintForm({ projectId, onCreated }: NewSprintProps) {
+function NewSprintButton({
+  projectId,
+  onCreated,
+}: {
+  projectId: string;
+  onCreated: (sprintId: string) => void;
+}) {
   const createSprint = useCreateSprint(projectId);
-  const { errors, formError, onSubmit } = useSchemaForm(createSprintSchema, async (input) => {
-    onCreated((await createSprint.mutateAsync(input)).id);
-  });
+  return (
+    <SprintPopover trigger="New sprint" title="New sprint">
+      {(close) => (
+        <SprintForm
+          defaults={{ name: '', startDate: localDate(), endDate: localDate(13) }}
+          submitLabel="Create sprint"
+          pending={createSprint.isPending}
+          onSubmit={async (input) => {
+            const { id } = await createSprint.mutateAsync(input);
+            close();
+            onCreated(id);
+          }}
+        />
+      )}
+    </SprintPopover>
+  );
+}
+
+function EditSprintButton({ projectId, sprint }: { projectId: string; sprint: Sprint }) {
+  const updateSprint = useUpdateSprint(projectId, sprint.id);
+  return (
+    <SprintPopover trigger={<Pencil />} triggerLabel="Edit sprint" title="Edit sprint">
+      {(close) => (
+        <SprintForm
+          defaults={sprint}
+          submitLabel="Save"
+          pending={updateSprint.isPending}
+          onSubmit={async (input) => {
+            await updateSprint.mutateAsync(input);
+            close();
+          }}
+        />
+      )}
+    </SprintPopover>
+  );
+}
+
+interface FormProps {
+  defaults: CreateSprintInput;
+  submitLabel: string;
+  pending: boolean;
+  onSubmit: (input: CreateSprintInput) => Promise<void>;
+}
+
+function SprintForm({ defaults, submitLabel, pending, onSubmit }: FormProps) {
+  const { errors, formError, onSubmit: submit } = useSchemaForm(createSprintSchema, onSubmit);
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-3">
-      <FormField name="name" label="Name" placeholder="Sprint 1" error={errors.name} />
+    <form onSubmit={submit} noValidate className="grid gap-3">
+      <FormField
+        name="name"
+        label="Name"
+        placeholder="Sprint 1"
+        defaultValue={defaults.name}
+        error={errors.name}
+      />
       <FormField
         name="startDate"
         label="Start"
         type="date"
-        defaultValue={localDate()}
+        defaultValue={defaults.startDate}
         error={errors.startDate}
       />
       <FormField
         name="endDate"
         label="End"
         type="date"
-        defaultValue={localDate(13)}
+        defaultValue={defaults.endDate}
         error={errors.endDate}
       />
       <ErrorText>{formError}</ErrorText>
-      <Button type="submit" disabled={createSprint.isPending}>
-        Create sprint
+      <Button type="submit" disabled={pending}>
+        {submitLabel}
       </Button>
     </form>
   );
