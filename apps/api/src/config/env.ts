@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// `KEY=` in .env arrives as "", not missing: treat both the same.
+const optional = z
+  .string()
+  .optional()
+  .transform((value) => value || undefined);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -8,6 +14,14 @@ const envSchema = z.object({
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10), // per IP per 15 min
+
+  // Who answers the AI buttons: the free built-in mock (default), a local
+  // Ollama model, or Anthropic's API. See .env.example for setup.
+  AI_PROVIDER: z.enum(['mock', 'ollama', 'anthropic']).default('mock'),
+  AI_MODEL: optional, // empty: the provider's default model
+  ANTHROPIC_API_KEY: optional,
+  OLLAMA_URL: z.url().default('http://localhost:11434'),
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20), // per user per hour
 });
 
 export type Env = z.infer<typeof envSchema>;

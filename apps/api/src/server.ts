@@ -1,11 +1,14 @@
 import { createApp } from './app';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
+import { defaultAiProvider } from './modules/ai/ai.routes';
 
-const app = createApp();
+const ai = defaultAiProvider();
+const app = createApp({ ai });
 
 const server = app.listen(env.PORT, () => {
   console.log(`API listening on http://localhost:${String(env.PORT)}`);
+  console.log(`AI provider: ${ai.name}`);
 });
 
 function shutdown(signal: string): void {

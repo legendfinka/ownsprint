@@ -6,6 +6,7 @@ export const TEST_ENV = {
   DATABASE_URL: TEST_DATABASE_URL,
   JWT_ACCESS_SECRET: 'test-only-secret-that-is-at-least-32-characters-long',
   AUTH_RATE_LIMIT_MAX: '1000', // the rate-limit test sets its own low limit
+  AI_PROVIDER: 'mock', // tests never call a real model; ai.test.ts injects fakes
 };
 
 // Tests wipe tables, so never run them against a non-test database.

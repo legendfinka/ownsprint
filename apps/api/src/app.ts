@@ -2,13 +2,25 @@ import cookieParser from 'cookie-parser';
 import express, { Router, type Express } from 'express';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
+import { createAiRouter, defaultAiProvider } from './modules/ai/ai.routes';
+import type { AiProvider } from './modules/ai/providers/ai-provider';
 import { createAuthRouter } from './modules/auth/auth.routes';
 import { projectsRouter } from './modules/projects/projects.routes';
 import { sprintsRouter } from './modules/sprints/sprints.routes';
 import { tasksRouter } from './modules/tasks/tasks.routes';
 
+interface AppOptions {
+  authRateLimitMax?: number;
+  aiRateLimitMax?: number;
+  ai?: AiProvider; // tests pass a fake
+}
+
 // Kept separate from server.ts so tests can use the app without opening a port.
-export function createApp({ authRateLimitMax = env.AUTH_RATE_LIMIT_MAX } = {}): Express {
+export function createApp({
+  authRateLimitMax = env.AUTH_RATE_LIMIT_MAX,
+  aiRateLimitMax = env.AI_RATE_LIMIT_MAX,
+  ai = defaultAiProvider(),
+}: AppOptions = {}): Express {
   const app = express();
 
   app.disable('x-powered-by');
@@ -23,6 +35,7 @@ export function createApp({ authRateLimitMax = env.AUTH_RATE_LIMIT_MAX } = {}): 
   });
   api.use('/auth', createAuthRouter(authRateLimitMax));
   api.use('/projects/:projectId/sprints', sprintsRouter);
+  api.use('/projects/:projectId/tasks/:taskId/ai', createAiRouter(ai, aiRateLimitMax));
   api.use('/projects/:projectId/tasks', tasksRouter);
   api.use('/projects', projectsRouter);
   app.use('/api', api);

@@ -91,6 +91,7 @@ ownsprint/
 - `pnpm --filter api test:watch` — API tests in watch mode (tests use `ownsprint_test`, never the dev database)
 - `pnpm --filter web test:watch` — web tests in watch mode
 - The API is served under `/api`; in dev, Vite proxies `/api` to http://localhost:4000
+- AI: `AI_PROVIDER` in `apps/api/.env` picks `mock` (default, no setup), `ollama` (free, local) or `anthropic` (needs `ANTHROPIC_API_KEY`); setup steps are in `.env.example`. Tests always use the mock.
 - `pnpm format` / `pnpm format:check` — Prettier (format check runs in CI)
 - `pnpm --filter api db:migrate` — create/apply migrations (`prisma migrate dev`)
 - `pnpm --filter api db:generate` — regenerate the Prisma client after schema changes

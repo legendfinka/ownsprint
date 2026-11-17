@@ -6,6 +6,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'AI_ERROR'
   | 'INTERNAL_ERROR';
 
 // Shape of every error response from the API.

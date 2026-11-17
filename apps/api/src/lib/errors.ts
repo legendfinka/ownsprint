@@ -49,6 +49,13 @@ export class ConflictError extends AppError {
   }
 }
 
+// The AI provider failed or kept answering nonsense. 502: our upstream broke, not the client.
+export class AiError extends AppError {
+  constructor(message: string) {
+    super(502, 'AI_ERROR', message);
+  }
+}
+
 export class RateLimitError extends AppError {
   constructor(message = 'Too many requests, try again later') {
     super(429, 'RATE_LIMITED', message);
