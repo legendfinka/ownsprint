@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  completeSprintSchema,
   createSprintSchema,
   projectParamsSchema,
   sprintParamsSchema,
@@ -25,6 +26,12 @@ sprintsRouter.patch(
   '/:sprintId',
   validate({ params: sprintParamsSchema, body: updateSprintSchema }),
   sprints.update,
+);
+sprintsRouter.post('/:sprintId/start', validate({ params: sprintParamsSchema }), sprints.start);
+sprintsRouter.post(
+  '/:sprintId/complete',
+  validate({ params: sprintParamsSchema, body: completeSprintSchema }),
+  sprints.complete,
 );
 // The sprint's board. Its tasks are served by the tasks module.
 sprintsRouter.get('/:sprintId/board', validate({ params: sprintParamsSchema }), tasks.board);

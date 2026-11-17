@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import type {
+  CompleteSprintInput,
   CreateSprintInput,
   Sprint,
   SprintListResponse,
@@ -26,6 +27,17 @@ export async function update(req: Request, res: Response<Sprint>): Promise<void>
   const { projectId, sprintId } = req.params as Params;
   const input = req.body as UpdateSprintInput;
   res.json(await sprints.updateSprint(requireUserId(req), projectId, sprintId, input));
+}
+
+export async function start(req: Request, res: Response<Sprint>): Promise<void> {
+  const { projectId, sprintId } = req.params as Params;
+  res.json(await sprints.startSprint(requireUserId(req), projectId, sprintId));
+}
+
+export async function complete(req: Request, res: Response<Sprint>): Promise<void> {
+  const { projectId, sprintId } = req.params as Params;
+  const input = req.body as CompleteSprintInput;
+  res.json(await sprints.completeSprint(requireUserId(req), projectId, sprintId, input));
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {

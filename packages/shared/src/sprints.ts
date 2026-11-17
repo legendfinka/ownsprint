@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sprintStatusSchema, type SprintStatus } from './enums';
+import type { SprintStatus } from './enums';
 import { projectParamsSchema } from './projects';
 
 export const sprintParamsSchema = projectParamsSchema.extend({ sprintId: z.uuid() });
@@ -11,11 +11,15 @@ export const createSprintSchema = z.object({
 });
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;
 
+// The status changes only through start and complete.
 export const updateSprintSchema = createSprintSchema
   .partial()
-  .extend({ status: sprintStatusSchema.optional() })
   .refine((input) => Object.keys(input).length > 0, 'Nothing to update');
 export type UpdateSprintInput = z.infer<typeof updateSprintSchema>;
+
+// Where the unfinished tasks go: a planned sprint, or the backlog (null).
+export const completeSprintSchema = z.object({ moveTo: z.uuid().nullable() });
+export type CompleteSprintInput = z.infer<typeof completeSprintSchema>;
 
 export interface Sprint {
   id: string;

@@ -10,9 +10,9 @@ import type {
   UpdateTaskInput,
 } from '@ownsprint/shared';
 import type { Task as TaskRow } from '../../generated/prisma/client';
-import { NotFoundError, ValidationError } from '../../lib/errors';
+import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors';
 import { isMember, requireAccess } from '../projects/projects.service';
-import { sprintExists } from '../sprints/sprints.service';
+import { sprintStatus } from '../sprints/sprints.service';
 import * as repo from './tasks.repository';
 
 export async function listTasks(
@@ -43,6 +43,7 @@ export async function createTask(
 ): Promise<Task> {
   await requireAccess(userId, projectId);
   await checkReferences(projectId, input);
+  await requireOpenSprint(projectId, input.sprintId ?? null);
 
   const position = await repo.nextPosition(projectId, input.sprintId, 'todo');
   return toTask(await repo.create({ ...input, projectId, position }));
@@ -61,6 +62,8 @@ export async function createSubtasks(
   if (parent.parentId) {
     throw ValidationError.fields({ taskId: 'Subtasks cannot have their own subtasks' });
   }
+
+  await requireOpenSprint(projectId, parent.sprintId);
 
   // Same sprint as the parent, in order, at the bottom of To Do.
   const first = await repo.nextPosition(projectId, parent.sprintId, 'todo');
@@ -91,6 +94,7 @@ export async function updateTask(
   // A new sprint or status means a new board column: put the task at its bottom.
   const sprintId = input.sprintId === undefined ? task.sprintId : input.sprintId;
   const status = input.status ?? task.status;
+  if (sprintId !== task.sprintId) await requireOpenSprint(projectId, sprintId);
   const moved = sprintId !== task.sprintId || status !== task.status;
   const position = moved ? await repo.nextPosition(projectId, sprintId, status) : undefined;
 
@@ -103,7 +107,7 @@ export async function getBoard(
   sprintId: string,
 ): Promise<BoardResponse> {
   await requireAccess(userId, projectId);
-  if (!(await sprintExists(projectId, sprintId))) throw new NotFoundError('Sprint not found');
+  if (!(await sprintStatus(projectId, sprintId))) throw new NotFoundError('Sprint not found');
 
   const tasks = await repo.findBoard(projectId, sprintId);
   return {
@@ -127,6 +131,7 @@ export async function moveTask(
   await requireAccess(userId, projectId);
   const task = await getOwnTask(projectId, taskId);
   if (task.parentId) throw ValidationError.fields({ taskId: 'Subtasks are not on the board' });
+  await requireOpenSprint(projectId, task.sprintId);
 
   const column = { projectId, sprintId: task.sprintId, status: input.status };
   const position = await positionBelow(column, taskId, input.afterId);
@@ -145,6 +150,13 @@ async function getOwnTask(projectId: string, taskId: string): Promise<TaskRow> {
   return task;
 }
 
+// A completed sprint is closed: nothing is added, moved or dragged in it.
+async function requireOpenSprint(projectId: string, sprintId: string | null): Promise<void> {
+  if (sprintId && (await sprintStatus(projectId, sprintId)) === 'completed') {
+    throw new ConflictError('This sprint is completed');
+  }
+}
+
 // Never trust ids from the client: each one must belong to this project.
 async function checkReferences(
   projectId: string,
@@ -153,7 +165,7 @@ async function checkReferences(
   // The three lookups don't depend on each other, so run them in parallel.
   const [assigneeOk, sprintOk, parent] = await Promise.all([
     !refs.assigneeId || isMember(projectId, refs.assigneeId),
-    !refs.sprintId || sprintExists(projectId, refs.sprintId),
+    !refs.sprintId || sprintStatus(projectId, refs.sprintId),
     refs.parentId ? repo.find(projectId, refs.parentId) : undefined,
   ]);
 

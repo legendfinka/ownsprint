@@ -1,4 +1,10 @@
-import type { CreateSprintInput, Sprint, UpdateSprintInput } from '@ownsprint/shared';
+import type {
+  CompleteSprintInput,
+  CreateSprintInput,
+  Sprint,
+  SprintStatus,
+  UpdateSprintInput,
+} from '@ownsprint/shared';
 import type { Sprint as SprintRow } from '../../generated/prisma/client';
 import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors';
 import { requireAccess } from '../projects/projects.service';
@@ -48,19 +54,52 @@ export async function updateSprint(
   const current = toSprint(sprint);
   checkDates(input.startDate ?? current.startDate, input.endDate ?? current.endDate);
 
-  // Only one active sprint per project, so the board knows what to show.
-  // Not race-proof: two activations at the same moment could both pass.
-  if (input.status === 'active' && (await repo.findOtherActive(projectId, sprintId))) {
-    throw new ConflictError('Another sprint is already active');
-  }
-
   const updated = await repo.update(sprintId, {
     name: input.name,
-    status: input.status,
     startDate: input.startDate ? new Date(input.startDate) : undefined,
     endDate: input.endDate ? new Date(input.endDate) : undefined,
   });
   return toSprint(updated);
+}
+
+export async function startSprint(
+  userId: string,
+  projectId: string,
+  sprintId: string,
+): Promise<Sprint> {
+  await requireAccess(userId, projectId);
+  const sprint = await getSprint(projectId, sprintId);
+  if (sprint.status !== 'planned') throw new ConflictError('Only a planned sprint can be started');
+
+  // One active sprint per project, so the board knows what to show.
+  // Not race-proof: two starts at the same moment could both pass.
+  const active = await repo.findOtherActive(projectId, sprintId);
+  if (active) throw new ConflictError(`"${active.name}" is already active`);
+
+  return toSprint(await repo.update(sprintId, { status: 'active' }));
+}
+
+// Owner only: it closes the sprint for everyone.
+export async function completeSprint(
+  userId: string,
+  projectId: string,
+  sprintId: string,
+  { moveTo }: CompleteSprintInput,
+): Promise<Sprint> {
+  await requireAccess(userId, projectId, 'owner');
+  await getSprint(projectId, sprintId);
+
+  if (moveTo !== null) {
+    const target = await repo.find(projectId, moveTo);
+    if (target?.status !== 'planned') {
+      throw ValidationError.fields({ moveTo: 'Pick a planned sprint of this project' });
+    }
+  }
+
+  if (!(await repo.complete(projectId, sprintId, moveTo))) {
+    throw new ConflictError('Only an active sprint can be completed');
+  }
+  return toSprint(await getSprint(projectId, sprintId));
 }
 
 export async function deleteSprint(
@@ -73,9 +112,12 @@ export async function deleteSprint(
   await repo.remove(sprintId);
 }
 
-// Used by tasks to check that a sprint id belongs to the project.
-export async function sprintExists(projectId: string, sprintId: string): Promise<boolean> {
-  return (await repo.find(projectId, sprintId)) !== null;
+// Used by tasks: the status of a sprint of this project, null if there is none.
+export async function sprintStatus(
+  projectId: string,
+  sprintId: string,
+): Promise<SprintStatus | null> {
+  return (await repo.find(projectId, sprintId))?.status ?? null;
 }
 
 async function getSprint(projectId: string, sprintId: string): Promise<SprintRow> {
