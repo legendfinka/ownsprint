@@ -6,6 +6,7 @@ import {
   AVATAR_EMOJIS,
   changeEmailSchema,
   changePasswordSchema,
+  isDemoEmail,
   updateProfileSchema,
   type PublicUser,
 } from '@ownsprint/shared';
@@ -33,8 +34,20 @@ export function SettingsPage() {
       </div>
 
       <ProfileForm user={user} />
-      <EmailForm user={user} />
-      <PasswordForm />
+      {isDemoEmail(user.email) ? (
+        // The API refuses these changes for demo accounts anyway.
+        <Section icon={KeyRound} title="Demo account">
+          <p className="text-sm text-muted-foreground">
+            This is a private demo account. Its email and password can’t be changed, and it’s
+            deleted after a day. Sign up to keep your work.
+          </p>
+        </Section>
+      ) : (
+        <>
+          <EmailForm user={user} />
+          <PasswordForm />
+        </>
+      )}
     </div>
   );
 }

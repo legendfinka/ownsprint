@@ -1,8 +1,7 @@
-// The public demo account. The seed script creates it and the login page's
-// "Try demo account" button signs in with it, so both read it from here.
-export const DEMO_ACCOUNT = {
-  email: 'demo@ownsprint.dev',
-  password: 'demo-password-123',
-  firstName: 'Demo',
-  lastName: 'User',
-} as const;
+// "Try demo account" gives each visitor a fresh, private account under this
+// domain, with its own sample project. The API deletes them after a day.
+export const DEMO_EMAIL_DOMAIN = 'demo.ownsprint.dev';
+
+export function isDemoEmail(email: string): boolean {
+  return email.endsWith(`@${DEMO_EMAIL_DOMAIN}`);
+}

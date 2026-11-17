@@ -1,11 +1,10 @@
-// `pnpm --filter api seed`: fills the database in DATABASE_URL with the demo data.
-import { DEMO_ACCOUNT } from '@ownsprint/shared';
+// `pnpm --filter api seed`: creates the fixed demo login in DATABASE_URL.
 import { prisma } from '../lib/prisma';
-import { seedDemo } from './demo-data';
+import { SEED_ACCOUNT, seedDemo } from './demo-data';
 
 try {
-  await seedDemo(prisma);
-  console.log(`Demo data ready. Log in as ${DEMO_ACCOUNT.email} / ${DEMO_ACCOUNT.password}`);
+  await seedDemo();
+  console.log(`Demo data ready. Log in as ${SEED_ACCOUNT.email} / ${SEED_ACCOUNT.password}`);
 } finally {
   await prisma.$disconnect();
 }

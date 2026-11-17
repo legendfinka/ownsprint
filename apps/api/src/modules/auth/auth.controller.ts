@@ -36,6 +36,12 @@ export async function login(req: Request, res: Response<AuthResponse>): Promise<
   res.json(session);
 }
 
+export async function demo(_req: Request, res: Response<AuthResponse>): Promise<void> {
+  const { refreshToken, ...session } = await authService.startDemo();
+  setRefreshCookie(res, refreshToken);
+  res.status(201).json(session);
+}
+
 export async function refresh(req: Request, res: Response<RefreshResponse>): Promise<void> {
   const { refreshToken, accessToken } = await authService.refresh(readRefreshCookie(req));
   setRefreshCookie(res, refreshToken);

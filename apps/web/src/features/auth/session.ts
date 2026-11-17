@@ -30,6 +30,11 @@ export function useLogin() {
   );
 }
 
+// A fresh private demo account with a sample project, made by the server.
+export function useStartDemo() {
+  return useStartSession(() => api<AuthResponse>('/auth/demo', { method: 'POST' }));
+}
+
 export function useRegister() {
   return useStartSession((input: RegisterInput) =>
     api<AuthResponse>('/auth/register', { method: 'POST', body: input }),

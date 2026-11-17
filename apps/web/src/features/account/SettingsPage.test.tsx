@@ -31,9 +31,9 @@ function fakeApi(response: () => Response) {
   return { calls };
 }
 
-function renderPage() {
+function renderPage(session: PublicUser = user) {
   const client = new QueryClient();
-  client.setQueryData(['session'], user);
+  client.setQueryData(['session'], session);
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -113,6 +113,14 @@ describe('SettingsPage', () => {
       { currentPassword: 'old-password', newPassword: 'a-brand-new-password' },
     ]);
     expect(screen.getByLabelText('New password')).toHaveValue('');
+  });
+
+  it('hides email and password for a demo account', () => {
+    renderPage({ ...user, email: 'abc@demo.ownsprint.dev' });
+
+    expect(screen.getByText(/private demo account/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change email' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change password' })).not.toBeInTheDocument();
   });
 
   it('does not send a too short new password', async () => {

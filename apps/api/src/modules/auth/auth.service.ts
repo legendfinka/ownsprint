@@ -1,6 +1,6 @@
 import {
-  DEMO_ACCOUNT,
   fullName,
+  isDemoEmail,
   type ChangeEmailInput,
   type ChangePasswordInput,
   type LoginInput,
@@ -19,6 +19,7 @@ import {
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { isUniqueConstraintError } from '../../lib/prisma';
 import { generateRefreshToken, hashToken, signAccessToken } from '../../lib/tokens';
+import { createVisitorDemo, isDemoUser } from '../../seed/demo-data';
 import { createUser, findUserByEmail, findUserById, updateUser } from '../users/users.repository';
 import {
   createRefreshToken,
@@ -43,6 +44,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const dummyHash = hashPassword('dummy-password');
 
 export async function register(input: RegisterInput): Promise<Session> {
+  rejectDemoDomain(input.email);
   const passwordHash = await hashPassword(input.password);
   try {
     const user = await createUser({
@@ -56,6 +58,11 @@ export async function register(input: RegisterInput): Promise<Session> {
     if (isUniqueConstraintError(err)) throw new ConflictError('Email is already registered');
     throw err;
   }
+}
+
+// "Try demo account": a new private demo user with a sample project, signed in.
+export async function startDemo(): Promise<Session> {
+  return startSession(await createVisitorDemo());
 }
 
 export async function login(input: LoginInput): Promise<Session> {
@@ -104,6 +111,7 @@ export async function updateProfile(
 
 export async function changeEmail(userId: string, input: ChangeEmailInput): Promise<PublicUser> {
   await requireCurrentPassword(userId, input.currentPassword);
+  rejectDemoDomain(input.email);
   try {
     return toPublicUser(await updateUser(userId, { email: input.email }));
   } catch (err) {
@@ -129,12 +137,19 @@ export async function changePassword(
 async function requireCurrentPassword(userId: string, password: string): Promise<void> {
   const user = await findUserById(userId);
   if (!user) throw new UnauthorizedError();
-  // Anyone can sign in to the public demo, so nobody may lock it out.
-  if (user.email === DEMO_ACCOUNT.email) {
-    throw new ForbiddenError('The demo account cannot change its email or password');
+  // Demo logins are public or throwaway: nobody may take one over.
+  if (isDemoUser(user.email)) {
+    throw new ForbiddenError('A demo account cannot change its email or password');
   }
   if (!(await verifyPassword(user.passwordHash, password))) {
     throw ValidationError.fields({ currentPassword: 'Wrong password' });
+  }
+}
+
+// Demo accounts are deleted after a day, so a real one must not use their domain.
+function rejectDemoDomain(email: string): void {
+  if (isDemoEmail(email)) {
+    throw ValidationError.fields({ email: 'This email domain is reserved for demo accounts' });
   }
 }
 

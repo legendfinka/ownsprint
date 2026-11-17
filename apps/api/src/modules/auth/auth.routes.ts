@@ -17,6 +17,8 @@ export function createAuthRouter(rateLimitMax: number): Router {
 
   router.post('/register', limiter, validate({ body: registerSchema }), auth.register);
   router.post('/login', limiter, validate({ body: loginSchema }), auth.login);
+  // Each call creates a user and a project, so it's limited like sign-up.
+  router.post('/demo', limiter, auth.demo);
   router.post('/refresh', auth.refresh);
   router.post('/logout', auth.logout);
   router.get('/me', authenticate, auth.me);
