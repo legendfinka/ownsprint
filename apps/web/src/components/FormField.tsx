@@ -10,13 +10,14 @@ interface Props extends ComponentProps<'input'> {
 }
 
 // Label + input + error message, wired together for screen readers.
-export function FormField({ name, label, error, ...inputProps }: Props) {
-  const errorId = `${name}-error`;
+// `id` defaults to the name; set it when two forms on a page share a field name.
+export function FormField({ name, label, error, id = name, ...inputProps }: Props) {
+  const errorId = `${id}-error`;
   return (
     <div className="grid content-start gap-2">
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       <Input
-        id={name}
+        id={id}
         name={name}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}

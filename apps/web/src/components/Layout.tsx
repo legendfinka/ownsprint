@@ -19,8 +19,15 @@ export function Layout() {
           <div className="flex items-center gap-3 text-sm">
             {user && (
               <>
-                <Avatar name={user.name} className="size-7" />
-                <span className="hidden font-medium sm:inline">{user.name}</span>
+                <Link to="/settings" aria-label="Settings" className="flex items-center gap-2">
+                  <Avatar
+                    name={user.name}
+                    avatarColor={user.avatarColor}
+                    avatarEmoji={user.avatarEmoji}
+                    className="size-7"
+                  />
+                  <span className="hidden font-medium hover:underline sm:inline">{user.name}</span>
+                </Link>
               </>
             )}
             <Button variant="outline" size="sm" onClick={() => logout.mutate()}>

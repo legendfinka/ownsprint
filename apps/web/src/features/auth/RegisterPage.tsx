@@ -19,7 +19,20 @@ export function RegisterPage() {
   return (
     <AuthCard title="Create an account" description="Start planning sprints in a minute.">
       <form onSubmit={onSubmit} noValidate className="grid gap-4">
-        <FormField name="name" label="Name" autoComplete="name" error={errors.name} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            name="firstName"
+            label="First name"
+            autoComplete="given-name"
+            error={errors.firstName}
+          />
+          <FormField
+            name="lastName"
+            label="Last name"
+            autoComplete="family-name"
+            error={errors.lastName}
+          />
+        </div>
         <FormField
           name="email"
           label="Email"

@@ -1,3 +1,4 @@
+import type { Avatar as AvatarChoice } from '@ownsprint/shared';
 import { cn } from '@/lib/utils';
 
 // Muted vintage tones. Dark ink text reads well on all of them, in both themes.
@@ -17,18 +18,25 @@ function initials(name: string): string {
   return letters.slice(0, 2).toUpperCase();
 }
 
-// Initials in a small ink-bordered square. Serif, so "O" never looks like "0".
-export function Avatar({ name, className }: { name: string; className?: string }) {
+interface Props extends Partial<AvatarChoice> {
+  name: string;
+  className?: string;
+}
+
+// An emoji or the initials in a small ink-bordered square. Serif, so "O" never
+// looks like "0". Without a chosen colour, one is picked from the name.
+export function Avatar({ name, avatarColor, avatarEmoji, className }: Props) {
   return (
     <span
       aria-hidden
+      style={avatarColor ? { backgroundColor: avatarColor } : undefined}
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-sm border-2 border-foreground font-heading text-xs font-bold text-[#2b2522]',
-        colorFor(name),
+        !avatarColor && colorFor(name),
         className,
       )}
     >
-      {initials(name)}
+      {avatarEmoji ?? initials(name)}
     </span>
   );
 }

@@ -8,7 +8,7 @@ import type {
 } from '@ownsprint/shared';
 import { api, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from '@/lib/api';
 
-const sessionKey = ['session'] as const;
+export const sessionKey = ['session'] as const;
 
 // The logged-in user, or null. After a page reload the access token is gone
 // (it lived in memory), so first get a new one with the refresh cookie.
