@@ -13,6 +13,10 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  // Proxies in front of the API (Express's "trust proxy" hop count). Behind
+  // Vercel and Render it's 2; without it every user would share the proxy's IP
+  // and its rate limit. 0 = not behind a proxy.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10), // per IP per 15 min
 
   // Who answers the AI buttons: the free built-in mock (default), a local

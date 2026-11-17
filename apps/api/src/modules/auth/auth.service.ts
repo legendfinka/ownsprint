@@ -1,4 +1,5 @@
 import {
+  DEMO_ACCOUNT,
   fullName,
   type ChangeEmailInput,
   type ChangePasswordInput,
@@ -9,7 +10,12 @@ import {
 } from '@ownsprint/shared';
 import { env } from '../../config/env';
 import type { User } from '../../generated/prisma/client';
-import { ConflictError, UnauthorizedError, ValidationError } from '../../lib/errors';
+import {
+  ConflictError,
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+} from '../../lib/errors';
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { isUniqueConstraintError } from '../../lib/prisma';
 import { generateRefreshToken, hashToken, signAccessToken } from '../../lib/tokens';
@@ -123,6 +129,10 @@ export async function changePassword(
 async function requireCurrentPassword(userId: string, password: string): Promise<void> {
   const user = await findUserById(userId);
   if (!user) throw new UnauthorizedError();
+  // Anyone can sign in to the public demo, so nobody may lock it out.
+  if (user.email === DEMO_ACCOUNT.email) {
+    throw new ForbiddenError('The demo account cannot change its email or password');
+  }
   if (!(await verifyPassword(user.passwordHash, password))) {
     throw ValidationError.fields({ currentPassword: 'Wrong password' });
   }
