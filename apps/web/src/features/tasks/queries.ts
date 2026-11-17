@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateTaskInput, Task, TaskDetail, UpdateTaskInput } from '@ownsprint/shared';
+import type {
+  CreateSubtasksInput,
+  CreateTaskInput,
+  SubtaskListResponse,
+  Task,
+  TaskDetail,
+  UpdateTaskInput,
+} from '@ownsprint/shared';
 import { useSearchParams } from 'react-router';
 import { api } from '@/lib/api';
 
@@ -53,6 +60,19 @@ export function useCreateSubtask(projectId: string, parent: Task) {
       api<Task>(`/projects/${projectId}/tasks`, {
         method: 'POST',
         body: { ...input, parentId: parent.id, sprintId: parent.sprintId },
+      }),
+    onSuccess: refresh,
+  });
+}
+
+// Several subtasks in one request (an AI breakdown the user confirmed).
+export function useCreateSubtasks(projectId: string, taskId: string) {
+  const refresh = useRefreshTasks(projectId);
+  return useMutation({
+    mutationFn: (input: CreateSubtasksInput) =>
+      api<SubtaskListResponse>(`/projects/${projectId}/tasks/${taskId}/subtasks`, {
+        method: 'POST',
+        body: input,
       }),
     onSuccess: refresh,
   });

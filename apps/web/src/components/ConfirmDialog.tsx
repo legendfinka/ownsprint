@@ -12,11 +12,19 @@ interface Props {
   description: ReactNode;
   confirmLabel: string;
   onConfirm: () => Promise<unknown>;
+  disabled?: boolean; // of the trigger button
 }
 
 // "Are you sure?" for destructive actions. An alert dialog: focus starts on
 // Cancel, and it doesn't close on an outside click, so nothing is lost by accident.
-export function ConfirmDialog({ trigger, title, description, confirmLabel, onConfirm }: Props) {
+export function ConfirmDialog({
+  trigger,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+  disabled,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -36,7 +44,7 @@ export function ConfirmDialog({ trigger, title, description, confirmLabel, onCon
 
   return (
     <AlertDialog.Root open={open} onOpenChange={setOpen}>
-      <AlertDialog.Trigger render={<Button variant="destructive" size="sm" />}>
+      <AlertDialog.Trigger render={<Button variant="destructive" size="sm" disabled={disabled} />}>
         {trigger}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>

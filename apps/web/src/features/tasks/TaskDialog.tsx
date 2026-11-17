@@ -14,11 +14,12 @@ import { Select } from '@/components/Select';
 import { Window } from '@/components/Window';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AiAssistant } from '@/features/ai/AiAssistant';
 import { COLUMNS } from '@/features/board/reorder';
 import { useProject } from '@/features/projects/queries';
 import { errorMessage, useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
-import { PriorityStamp } from './PriorityStamp';
+import { PriorityMark, PriorityOptions, PriorityStamp } from './PriorityStamp';
 import {
   useCreateSubtask,
   useDeleteTask,
@@ -97,7 +98,10 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
         </button>
       )}
 
+      {/* Fields are uncontrolled, so each is keyed by its saved value: when it
+          changes elsewhere (AI "Apply", a board move), the field shows it. */}
       <input
+        key={task.title}
         aria-label="Title"
         defaultValue={task.title}
         onBlur={(e) => {
@@ -110,6 +114,7 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Field label="Status">
           <Select
+            key={task.status}
             defaultValue={task.status}
             onChange={(e) => save({ status: taskStatusSchema.parse(e.target.value) })}
           >
@@ -122,16 +127,17 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
         </Field>
         <Field label="Priority">
           <Select
+            key={task.priority}
+            icon={<PriorityMark priority={task.priority} colored />}
             defaultValue={task.priority}
             onChange={(e) => save({ priority: prioritySchema.parse(e.target.value) })}
           >
-            <option value="low">▼ Low</option>
-            <option value="medium">■ Medium</option>
-            <option value="high">▲ High</option>
+            <PriorityOptions />
           </Select>
         </Field>
         <Field label="Estimate (pts)">
           <Input
+            key={task.estimate}
             type="number"
             min={0}
             max={100}
@@ -145,6 +151,7 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
         </Field>
         <Field label="Assignee">
           <Select
+            key={task.assigneeId}
             defaultValue={task.assigneeId ?? ''}
             onChange={(e) => save({ assigneeId: e.target.value || null })}
           >
@@ -160,6 +167,7 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
 
       <Field label="Description">
         <textarea
+          key={task.description}
           rows={4}
           defaultValue={task.description}
           placeholder="Add some details…"
@@ -171,6 +179,8 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
       </Field>
 
       <ErrorText>{update.error && errorMessage(update.error)}</ErrorText>
+
+      <AiAssistant projectId={projectId} task={task} />
 
       {!task.parentId && <Subtasks projectId={projectId} task={task} />}
 
