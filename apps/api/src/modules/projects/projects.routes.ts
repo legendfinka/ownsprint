@@ -4,6 +4,7 @@ import {
   memberParamsSchema,
   projectNameSchema,
   projectParamsSchema as params,
+  updateMemberSchema,
 } from '@ownsprint/shared';
 import { authenticate } from '../../middleware/authenticate';
 import { validate } from '../../middleware/validate';
@@ -23,6 +24,11 @@ projectsRouter.post(
   '/:projectId/members',
   validate({ params, body: addMemberSchema }),
   projects.addMember,
+);
+projectsRouter.patch(
+  '/:projectId/members/:userId',
+  validate({ params: memberParamsSchema, body: updateMemberSchema }),
+  projects.updateMember,
 );
 projectsRouter.delete(
   '/:projectId/members/:userId',

@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { loginSchema, registerSchema } from '@ownsprint/shared';
+import {
+  changeEmailSchema,
+  changePasswordSchema,
+  loginSchema,
+  registerSchema,
+  updateProfileSchema,
+} from '@ownsprint/shared';
 import { authenticate } from '../../middleware/authenticate';
 import { createAuthRateLimiter } from '../../middleware/rate-limit';
 import { validate } from '../../middleware/validate';
@@ -14,6 +20,22 @@ export function createAuthRouter(rateLimitMax: number): Router {
   router.post('/refresh', auth.refresh);
   router.post('/logout', auth.logout);
   router.get('/me', authenticate, auth.me);
+  router.patch('/me', authenticate, validate({ body: updateProfileSchema }), auth.updateProfile);
+  // These check the password, so they get the same brute-force limiter as login.
+  router.patch(
+    '/me/email',
+    authenticate,
+    limiter,
+    validate({ body: changeEmailSchema }),
+    auth.changeEmail,
+  );
+  router.patch(
+    '/me/password',
+    authenticate,
+    limiter,
+    validate({ body: changePasswordSchema }),
+    auth.changePassword,
+  );
 
   return router;
 }

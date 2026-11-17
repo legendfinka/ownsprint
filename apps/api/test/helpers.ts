@@ -25,7 +25,8 @@ export async function registerUser(app: Express, overrides: Partial<RegisterInpu
   const input: RegisterInput = {
     email: 'user@example.com',
     password: 'a-strong-password',
-    name: 'Test User',
+    firstName: 'Test',
+    lastName: 'User',
     ...overrides,
   };
   const res = await request(app).post('/api/auth/register').send(input).expect(201);

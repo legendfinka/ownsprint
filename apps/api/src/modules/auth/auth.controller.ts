@@ -1,10 +1,13 @@
 import type { CookieOptions, Request, Response } from 'express';
 import type {
   AuthResponse,
+  ChangeEmailInput,
+  ChangePasswordInput,
   LoginInput,
   MeResponse,
   RefreshResponse,
   RegisterInput,
+  UpdateProfileInput,
 } from '@ownsprint/shared';
 import { env } from '../../config/env';
 import { requireUserId } from '../../middleware/authenticate';
@@ -47,6 +50,25 @@ export async function logout(req: Request, res: Response): Promise<void> {
 
 export async function me(req: Request, res: Response<MeResponse>): Promise<void> {
   res.json({ user: await authService.getCurrentUser(requireUserId(req)) });
+}
+
+export async function updateProfile(req: Request, res: Response<MeResponse>): Promise<void> {
+  const user = await authService.updateProfile(requireUserId(req), req.body as UpdateProfileInput);
+  res.json({ user });
+}
+
+export async function changeEmail(req: Request, res: Response<MeResponse>): Promise<void> {
+  const user = await authService.changeEmail(requireUserId(req), req.body as ChangeEmailInput);
+  res.json({ user });
+}
+
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  await authService.changePassword(
+    requireUserId(req),
+    readRefreshCookie(req),
+    req.body as ChangePasswordInput,
+  );
+  res.status(204).end();
 }
 
 function setRefreshCookie(res: Response, token: string): void {

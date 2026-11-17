@@ -1,12 +1,14 @@
-import type {
-  AddMemberInput,
-  ProjectDetail,
-  ProjectMember,
-  ProjectNameInput,
-  ProjectSummary,
-  Role,
+import {
+  fullName,
+  type AddMemberInput,
+  type ProjectDetail,
+  type ProjectMember,
+  type ProjectNameInput,
+  type ProjectSummary,
+  type Role,
+  type UpdateMemberInput,
 } from '@ownsprint/shared';
-import type { Membership, Project } from '../../generated/prisma/client';
+import type { Membership, Project, User } from '../../generated/prisma/client';
 import { ConflictError, ForbiddenError, NotFoundError } from '../../lib/errors';
 import { isUniqueConstraintError } from '../../lib/prisma';
 import { findUserByEmail } from '../users/users.repository';
@@ -49,7 +51,10 @@ export async function getProject(userId: string, projectId: string): Promise<Pro
   const project = await repo.findWithMembers(projectId);
   if (!project) throw new NotFoundError('Project not found');
 
-  const members = project.memberships.map((m) => ({ ...m.user, role: m.role }));
+  const members = project.memberships
+    .map((m) => toMember(m.user, m.role, m.title))
+    // Owner first; the rest stay alphabetical (the sort is stable).
+    .sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner'));
   return { ...toSummary(project, role), members };
 }
 
@@ -83,7 +88,23 @@ export async function addMember(
     if (isUniqueConstraintError(err)) throw new ConflictError('User is already a member');
     throw err;
   }
-  return { id: user.id, name: user.name, email: user.email, role: 'member' };
+  return toMember(user, 'member', null);
+}
+
+export async function updateMember(
+  userId: string,
+  projectId: string,
+  memberId: string,
+  input: UpdateMemberInput,
+): Promise<ProjectMember> {
+  await requireAccess(userId, projectId, 'owner');
+  // An empty title clears it.
+  const found = await repo.setMemberTitle(projectId, memberId, input.title || null);
+  if (!found) throw new NotFoundError('Member not found');
+
+  const member = await repo.findMember(projectId, memberId);
+  if (!member) throw new NotFoundError('Member not found');
+  return toMember(member.user, member.role, member.title);
 }
 
 export async function removeMember(
@@ -97,6 +118,23 @@ export async function removeMember(
 
   const removed = await repo.removeMember(projectId, memberId);
   if (!removed) throw new NotFoundError('Member not found');
+}
+
+function toMember(
+  user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'avatarColor' | 'avatarEmoji'>,
+  role: Role,
+  title: string | null,
+): ProjectMember {
+  return {
+    id: user.id,
+    name: fullName(user.firstName, user.lastName),
+    email: user.email,
+    // Only values from the shared lists are ever saved, so the casts are safe.
+    avatarColor: user.avatarColor as ProjectMember['avatarColor'],
+    avatarEmoji: user.avatarEmoji as ProjectMember['avatarEmoji'],
+    role,
+    title,
+  };
 }
 
 function toSummary(project: Project, role: Role): ProjectSummary {

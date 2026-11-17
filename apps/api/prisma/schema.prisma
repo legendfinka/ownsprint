@@ -36,7 +36,10 @@ model User {
   id           String   @id @default(uuid(7)) @db.Uuid
   email        String   @unique
   passwordHash String
-  name         String
+  firstName    String
+  lastName     String   @default("")
+  avatarColor  String?
+  avatarEmoji  String?
   createdAt    DateTime @default(now())
 
   ownedProjects Project[]      @relation("ProjectOwner")
@@ -64,6 +67,9 @@ model Membership {
   userId    String @db.Uuid
   projectId String @db.Uuid
   role      Role   @default(member)
+  // What the person does on the team ("Developer", "Tester"…). A label only:
+  // permissions come from `role`.
+  title     String? @db.VarChar(40)
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

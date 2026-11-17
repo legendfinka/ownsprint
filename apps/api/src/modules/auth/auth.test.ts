@@ -14,11 +14,23 @@ describe('POST /auth/register', () => {
   it('creates a user and sets a secure refresh cookie', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: ' Alice@Example.COM ', password: 'correct-horse', name: ' Alice ' })
+      .send({
+        email: ' Alice@Example.COM ',
+        password: 'correct-horse',
+        firstName: ' Alice ',
+        lastName: ' Lee ',
+      })
       .expect(201);
 
     const body = res.body as AuthResponse;
-    expect(body.user).toMatchObject({ email: 'alice@example.com', name: 'Alice' });
+    expect(body.user).toMatchObject({
+      email: 'alice@example.com',
+      firstName: 'Alice',
+      lastName: 'Lee',
+      name: 'Alice Lee',
+      avatarColor: null,
+      avatarEmoji: null,
+    });
     expect(body.user).not.toHaveProperty('passwordHash');
     expect(body.accessToken).toEqual(expect.any(String));
 
@@ -36,7 +48,12 @@ describe('POST /auth/register', () => {
 
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: 'BOB@example.com', password: 'another-password', name: 'Bob' })
+      .send({
+        email: 'BOB@example.com',
+        password: 'another-password',
+        firstName: 'Bob',
+        lastName: '',
+      })
       .expect(409);
 
     expect(errorCode(res)).toBe('CONFLICT');
@@ -45,13 +62,15 @@ describe('POST /auth/register', () => {
   it('returns field errors for invalid input', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: 'not-an-email', password: 'short', name: '' })
+      .send({ email: 'not-an-email', password: 'short', firstName: '', lastName: '' })
       .expect(400);
 
     const { error } = res.body as ErrorResponse;
     expect(error.code).toBe('VALIDATION_ERROR');
     const { fieldErrors } = (error.details as { body: { fieldErrors: object } }).body;
-    expect(Object.keys(fieldErrors)).toEqual(expect.arrayContaining(['email', 'password', 'name']));
+    expect(Object.keys(fieldErrors)).toEqual(
+      expect.arrayContaining(['email', 'password', 'firstName']),
+    );
   });
 });
 
@@ -166,6 +185,109 @@ describe('GET /auth/me', () => {
     const { body } = await registerUser(app);
     const forged = await sign(body.user.id, 'an-attacker-secret-that-is-long-enough', now() + 60);
     await me(forged).expect(401);
+  });
+});
+
+describe('account settings', () => {
+  const as = (token: string) => ({ Authorization: `Bearer ${token}` });
+  const login = (email: string, password: string) =>
+    request(app).post('/api/auth/login').send({ email, password });
+
+  it('updates the name and avatar, and clears the emoji', async () => {
+    const { token } = await registerUser(app);
+    const patch = (body: object) => request(app).patch('/api/auth/me').set(as(token)).send(body);
+
+    const res = await patch({
+      firstName: ' Ann ',
+      lastName: 'Lee',
+      avatarColor: '#a8c3a0',
+      avatarEmoji: '🦊',
+    }).expect(200);
+    expect((res.body as MeResponse).user).toMatchObject({
+      name: 'Ann Lee',
+      avatarColor: '#a8c3a0',
+      avatarEmoji: '🦊',
+    });
+
+    const cleared = await patch({
+      firstName: 'Ann',
+      lastName: '',
+      avatarColor: '#a8c3a0',
+      avatarEmoji: null,
+    }).expect(200);
+    expect((cleared.body as MeResponse).user).toMatchObject({ name: 'Ann', avatarEmoji: null });
+  });
+
+  it('only accepts avatars from the lists', async () => {
+    const { token } = await registerUser(app);
+    const profile = { firstName: 'Ann', lastName: '', avatarColor: null, avatarEmoji: null };
+    const patch = (body: object) => request(app).patch('/api/auth/me').set(as(token)).send(body);
+
+    await patch({ ...profile, avatarColor: '#ff0000' }).expect(400);
+    await patch({ ...profile, avatarEmoji: 'hello' }).expect(400);
+    await patch({ ...profile, firstName: ' ' }).expect(400);
+  });
+
+  it('requires login', async () => {
+    await request(app).patch('/api/auth/me').send({}).expect(401);
+    await request(app).patch('/api/auth/me/email').send({}).expect(401);
+    await request(app).patch('/api/auth/me/password').send({}).expect(401);
+  });
+
+  it('changes the email with the current password', async () => {
+    const { token, input } = await registerUser(app);
+    const change = (email: string, currentPassword: string) =>
+      request(app).patch('/api/auth/me/email').set(as(token)).send({ email, currentPassword });
+
+    const res = await change(' New@Example.com ', input.password).expect(200);
+    expect((res.body as MeResponse).user.email).toBe('new@example.com');
+    await login('new@example.com', input.password).expect(200);
+    await login(input.email, input.password).expect(401);
+  });
+
+  it('refuses a new email with a wrong password or one already taken', async () => {
+    await registerUser(app, { email: 'taken@example.com' });
+    const { token, input } = await registerUser(app, { email: 'me@example.com' });
+    const change = (email: string, currentPassword: string) =>
+      request(app).patch('/api/auth/me/email').set(as(token)).send({ email, currentPassword });
+
+    const wrong = await change('new@example.com', 'not-my-password').expect(400);
+    expect(JSON.stringify((wrong.body as ErrorResponse).error.details)).toContain(
+      'currentPassword',
+    );
+    expect(errorCode(await change('TAKEN@example.com', input.password).expect(409))).toBe(
+      'CONFLICT',
+    );
+  });
+
+  it('changes the password and signs out the other sessions only', async () => {
+    const { token, input, refreshCookie } = await registerUser(app);
+    const otherDevice = getRefreshCookie(await login(input.email, input.password).expect(200));
+
+    await request(app)
+      .patch('/api/auth/me/password')
+      .set(as(token))
+      .set('Cookie', refreshCookie)
+      .send({ currentPassword: input.password, newPassword: 'a-brand-new-password' })
+      .expect(204);
+
+    await login(input.email, input.password).expect(401);
+    await login(input.email, 'a-brand-new-password').expect(200);
+    // Order matters: a revoked token coming back counts as theft and ends all sessions.
+    await request(app).post('/api/auth/refresh').set('Cookie', refreshCookie).expect(200);
+    await request(app).post('/api/auth/refresh').set('Cookie', otherDevice).expect(401);
+  });
+
+  it('refuses a new password when the current one is wrong', async () => {
+    const { token, input } = await registerUser(app);
+
+    await request(app)
+      .patch('/api/auth/me/password')
+      .set(as(token))
+      .send({ currentPassword: 'nope-nope', newPassword: 'a-brand-new-password' })
+      .expect(400);
+
+    await login(input.email, input.password).expect(200); // unchanged
   });
 });
 

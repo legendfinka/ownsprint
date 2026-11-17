@@ -1,5 +1,17 @@
 import { prisma } from '../../lib/prisma';
 
+// What the team list needs to know about a person.
+const memberUser = {
+  select: {
+    id: true,
+    email: true,
+    firstName: true,
+    lastName: true,
+    avatarColor: true,
+    avatarEmoji: true,
+  },
+} as const;
+
 // Project and owner membership are created in one query, so they can't get out of sync.
 export function create(name: string, ownerId: string) {
   return prisma.project.create({
@@ -24,8 +36,12 @@ export function findWithMembers(projectId: string) {
     where: { id: projectId },
     include: {
       memberships: {
-        select: { role: true, user: { select: { id: true, name: true, email: true } } },
-        orderBy: { user: { name: 'asc' } },
+        select: {
+          role: true,
+          title: true,
+          user: memberUser,
+        },
+        orderBy: [{ user: { firstName: 'asc' } }, { user: { lastName: 'asc' } }],
       },
     },
   });
@@ -44,7 +60,38 @@ export function addMember(projectId: string, userId: string) {
   return prisma.membership.create({ data: { projectId, userId, role: 'member' } });
 }
 
+// Their tasks become unassigned in the same transaction, so nothing stays
+// assigned to someone who can no longer see the project.
 export async function removeMember(projectId: string, userId: string): Promise<boolean> {
-  const { count } = await prisma.membership.deleteMany({ where: { projectId, userId } });
+  const [, { count }] = await prisma.$transaction([
+    prisma.task.updateMany({
+      where: { projectId, assigneeId: userId },
+      data: { assigneeId: null },
+    }),
+    prisma.membership.deleteMany({ where: { projectId, userId } }),
+  ]);
   return count === 1;
+}
+
+export async function setMemberTitle(
+  projectId: string,
+  userId: string,
+  title: string | null,
+): Promise<boolean> {
+  const { count } = await prisma.membership.updateMany({
+    where: { projectId, userId },
+    data: { title },
+  });
+  return count === 1;
+}
+
+export function findMember(projectId: string, userId: string) {
+  return prisma.membership.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+    select: {
+      role: true,
+      title: true,
+      user: memberUser,
+    },
+  });
 }

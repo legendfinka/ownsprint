@@ -6,19 +6,22 @@ import type {
   ProjectListResponse,
   ProjectMember,
   ProjectSummary,
+  Task,
 } from '@ownsprint/shared';
 import { createApp } from '../../app';
 import { prisma } from '../../lib/prisma';
-import { auth, createProject, registerUser } from '../../../test/helpers';
+import { auth, createProject, createTask, registerUser } from '../../../test/helpers';
 
 const app = createApp();
 const errorCode = (res: request.Response) => (res.body as ErrorResponse).error.code;
 
 // An owner, a member and an outsider around one project.
 async function setup() {
-  const owner = await registerUser(app, { email: 'owner@example.com', name: 'Olivia' });
-  const member = await registerUser(app, { email: 'member@example.com', name: 'Mark' });
-  const outsider = await registerUser(app, { email: 'outsider@example.com', name: 'Otto' });
+  const named = (email: string, firstName: string) =>
+    registerUser(app, { email, firstName, lastName: '' });
+  const owner = await named('owner@example.com', 'Olivia');
+  const member = await named('member@example.com', 'Mark');
+  const outsider = await named('outsider@example.com', 'Otto');
   const project = await createProject(app, owner.token);
   await request(app)
     .post(`/api/projects/${project.id}/members`)
@@ -89,9 +92,26 @@ describe('project access', () => {
     const as = auth(member.token);
 
     const res = await request(app).get(url).set(as).expect(200);
+    // The owner is always listed first, even though "Mark" sorts before "Olivia".
     expect((res.body as ProjectDetail).members).toEqual([
-      { id: member.body.user.id, name: 'Mark', email: 'member@example.com', role: 'member' },
-      { id: owner.body.user.id, name: 'Olivia', email: 'owner@example.com', role: 'owner' },
+      {
+        id: owner.body.user.id,
+        name: 'Olivia',
+        email: 'owner@example.com',
+        role: 'owner',
+        title: null,
+        avatarColor: null,
+        avatarEmoji: null,
+      },
+      {
+        id: member.body.user.id,
+        name: 'Mark',
+        email: 'member@example.com',
+        role: 'member',
+        title: null,
+        avatarColor: null,
+        avatarEmoji: null,
+      },
     ]);
 
     const responses = await Promise.all([
@@ -160,5 +180,77 @@ describe('project members', () => {
       .expect(409);
 
     expect(errorCode(res)).toBe('CONFLICT');
+  });
+
+  it('unassigns the tasks of a removed member', async () => {
+    const { owner, member, project, url } = await setup();
+    const task = await createTask(app, owner.token, project.id, {
+      assigneeId: member.body.user.id,
+    });
+
+    await request(app)
+      .delete(`${url}/members/${member.body.user.id}`)
+      .set(auth(owner.token))
+      .expect(204);
+
+    const res = await request(app)
+      .get(`${url}/tasks/${task.id}`)
+      .set(auth(owner.token))
+      .expect(200);
+    expect((res.body as Task).assigneeId).toBeNull();
+  });
+});
+
+describe('member titles', () => {
+  const members = async (url: string, token: string) =>
+    ((await request(app).get(url).set(auth(token)).expect(200)).body as ProjectDetail).members;
+
+  it('lets the owner set and clear a title, trimmed', async () => {
+    const { owner, member, url } = await setup();
+    const set = (title: string) =>
+      request(app)
+        .patch(`${url}/members/${member.body.user.id}`)
+        .set(auth(owner.token))
+        .send({ title });
+
+    const res = await set('  Tester ').expect(200);
+    expect((res.body as ProjectMember).title).toBe('Tester');
+    expect((await members(url, member.token)).find((m) => m.name === 'Mark')?.title).toBe('Tester');
+
+    await set('').expect(200);
+    expect((await members(url, owner.token)).find((m) => m.name === 'Mark')?.title).toBeNull();
+  });
+
+  it('starts without titles and does not change permissions', async () => {
+    const { owner, member, url } = await setup();
+    expect((await members(url, owner.token)).map((m) => m.title)).toEqual([null, null]);
+
+    await request(app)
+      .patch(`${url}/members/${member.body.user.id}`)
+      .set(auth(owner.token))
+      .send({ title: 'Designer' })
+      .expect(200);
+
+    // Still just a member: cannot rename the project.
+    await request(app).patch(url).set(auth(member.token)).send({ name: 'Mine now' }).expect(403);
+  });
+
+  it('only lets the owner set titles', async () => {
+    const { member, owner, url } = await setup();
+
+    await request(app)
+      .patch(`${url}/members/${owner.body.user.id}`)
+      .set(auth(member.token))
+      .send({ title: 'Boss' })
+      .expect(403);
+  });
+
+  it('rejects titles over 40 characters, and people who are not members', async () => {
+    const { owner, outsider, member, url } = await setup();
+    const patch = (id: string, title: string) =>
+      request(app).patch(`${url}/members/${id}`).set(auth(owner.token)).send({ title });
+
+    await patch(member.body.user.id, 'x'.repeat(41)).expect(400);
+    await patch(outsider.body.user.id, 'Tester').expect(404);
   });
 });

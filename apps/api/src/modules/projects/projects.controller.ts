@@ -6,6 +6,7 @@ import type {
   ProjectMember,
   ProjectNameInput,
   ProjectSummary,
+  UpdateMemberInput,
 } from '@ownsprint/shared';
 import { requireUserId } from '../../middleware/authenticate';
 import * as projects from './projects.service';
@@ -51,6 +52,15 @@ export async function addMember(
   const input = req.body as AddMemberInput;
   const member = await projects.addMember(requireUserId(req), req.params.projectId, input);
   res.status(201).json(member);
+}
+
+export async function updateMember(
+  req: Request<MemberParams>,
+  res: Response<ProjectMember>,
+): Promise<void> {
+  const { projectId, userId } = req.params;
+  const input = req.body as UpdateMemberInput;
+  res.json(await projects.updateMember(requireUserId(req), projectId, userId, input));
 }
 
 export async function removeMember(req: Request<MemberParams>, res: Response): Promise<void> {

@@ -22,9 +22,10 @@ export async function revokeRefreshToken(id: string): Promise<boolean> {
   return count === 1;
 }
 
-export async function revokeAllRefreshTokens(userId: string): Promise<void> {
+// Revokes every session of the user, except the one with id `keepId` (if given).
+export async function revokeAllRefreshTokens(userId: string, keepId?: string): Promise<void> {
   await prisma.refreshToken.updateMany({
-    where: { userId, revokedAt: null },
+    where: { userId, revokedAt: null, ...(keepId && { id: { not: keepId } }) },
     data: { revokedAt: new Date() },
   });
 }
