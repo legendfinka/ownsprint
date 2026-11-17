@@ -22,7 +22,9 @@ export function FormField({ name, label, error, ...inputProps }: Props) {
         aria-describedby={error ? errorId : undefined}
         {...inputProps}
       />
-      <ErrorText id={errorId}>{error}</ErrorText>
+      <ErrorText id={errorId} compact>
+        {error}
+      </ErrorText>
     </div>
   );
 }
