@@ -81,7 +81,8 @@ pnpm monorepo: `apps/web` (React + Vite), `apps/api` (Express), `packages/shared
 - `AI_PROVIDER` in `apps/api/.env`: `mock` (default), `ollama` or `anthropic` (`ANTHROPIC_API_KEY`); tests use the mock
 - `pnpm format` / `format:check` — Prettier (checked in CI)
 - `pnpm --filter api db:migrate` / `db:generate` — migrations / Prisma client
-- `pnpm --filter api seed` — demo data (step 9)
+- `pnpm --filter api seed` — demo account + sample project (re-run resets it); `DATABASE_URL=<url> pnpm --filter api seed` targets another DB
+- Deploy: `render.yaml` (API on Render, runs `db:deploy`), `apps/web/vercel.json` (proxies `/api` to Render), Neon for Postgres
 
 ## CI
 

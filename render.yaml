@@ -1,0 +1,22 @@
+# Render Blueprint: the API as a free web service. The database lives on Neon.
+services:
+  - type: web
+    name: ownsprint-api
+    runtime: node
+    plan: free
+    # --prod=false: Render sets NODE_ENV=production, which would skip the dev
+    # dependencies (tsx and prisma) that the start and migrate commands need.
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter api db:deploy
+    startCommand: pnpm --filter api start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # the Neon connection string, set in the dashboard
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: '2' # Vercel + Render
+      - key: AI_PROVIDER
+        value: mock
