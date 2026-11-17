@@ -58,8 +58,7 @@ export function errorMessage(error: unknown): string {
 function fromApiError(error: unknown): FieldErrors {
   if (!(error instanceof ApiError)) return {};
   const details = error.details as
-    | { body?: { fieldErrors?: Record<string, string[]> } }
-    | undefined;
+    { body?: { fieldErrors?: Record<string, string[]> } } | undefined;
   const fields = Object.entries(details?.body?.fieldErrors ?? {});
   return Object.fromEntries(fields.map(([field, messages]) => [field, messages[0]]));
 }

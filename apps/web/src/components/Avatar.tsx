@@ -19,7 +19,6 @@ function initials(name: string): string {
 
 // Initials in a small ink-bordered square. Serif, so "O" never looks like "0".
 export function Avatar({ name, className }: { name: string; className?: string }) {
-
   return (
     <span
       aria-hidden

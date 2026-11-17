@@ -15,7 +15,12 @@ export function TaskCard({ task, lifted }: { task: BoardTask; lifted?: boolean }
         lifted && 'rotate-2 cursor-grabbing shadow-hard',
       )}
     >
-      <p className={cn('font-medium', task.status === 'done' && 'text-muted-foreground line-through')}>
+      <p
+        className={cn(
+          'font-medium',
+          task.status === 'done' && 'text-muted-foreground line-through',
+        )}
+      >
         {task.title}
       </p>
       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
@@ -26,7 +31,10 @@ export function TaskCard({ task, lifted }: { task: BoardTask; lifted?: boolean }
             {done}/{total}
             <span className="sr-only">subtasks done</span>
             <span aria-hidden className="h-1.5 w-10 border border-current">
-              <span className="block h-full bg-success" style={{ width: `${(done / total) * 100}%` }} />
+              <span
+                className="block h-full bg-success"
+                style={{ width: `${(done / total) * 100}%` }}
+              />
             </span>
           </span>
         )}
@@ -40,8 +48,10 @@ export function TaskCard({ task, lifted }: { task: BoardTask; lifted?: boolean }
 
 // A thick line in the gap above or below a card: "the card lands here".
 const dropLineClass = {
-  above: "before:absolute before:inset-x-0 before:-top-2 before:h-1 before:bg-primary before:content-['']",
-  below: "after:absolute after:inset-x-0 after:-bottom-2 after:h-1 after:bg-primary after:content-['']",
+  above:
+    "before:absolute before:inset-x-0 before:-top-2 before:h-1 before:bg-primary before:content-['']",
+  below:
+    "after:absolute after:inset-x-0 after:-bottom-2 after:h-1 after:bg-primary after:content-['']",
 };
 
 interface Props {

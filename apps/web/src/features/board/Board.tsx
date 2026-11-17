@@ -12,11 +12,14 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ErrorText } from '@/components/ErrorText';
+import { BulkEstimate } from '@/features/ai/BulkEstimate';
 import { TaskDialog } from '@/features/tasks/TaskDialog';
 import { AddTaskForm } from './AddTaskForm';
 import { Column } from './Column';
+import { sprintPoints } from './points';
 import { useBoard, useMoveTask } from './queries';
 import { COLUMNS, dropToMove, type Move } from './reorder';
+import { SprintProgress } from './SprintProgress';
 import { TaskCard } from './TaskCard';
 
 export function Board({ projectId, sprintId }: { projectId: string; sprintId: string }) {
@@ -55,9 +58,15 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
   }
 
   const dragging = tasks.find((t) => t.id === draggingId);
+  // Worked out from the same list the columns show, so a drag updates it at once.
+  const points = sprintPoints(tasks);
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-4">
+      <SprintProgress
+        points={points}
+        action={<BulkEstimate projectId={projectId} sprintId={sprintId} tasks={tasks} />}
+      />
       <ErrorText>
         {moveTask.error && `Could not move the card: ${moveTask.error.message}`}
       </ErrorText>
@@ -76,6 +85,7 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
               status={status}
               title={title}
               tasks={tasks.filter((t) => t.status === status)}
+              points={points.byStatus[status]}
               dropTarget={preview?.status === status ? preview : undefined}
             >
               {status === 'todo' && <AddTaskForm projectId={projectId} sprintId={sprintId} />}

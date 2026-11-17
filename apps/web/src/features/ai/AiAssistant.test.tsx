@@ -20,8 +20,14 @@ const breakdown: BreakdownSuggestion = {
     { title: 'Add a download button', priority: 'low', estimate: 1 },
   ],
 };
-const estimate: EstimateSuggestion = { estimate: 5, priority: 'high', rationale: 'Touches many parts.' };
-const description: DescriptionSuggestion = { description: 'Export tasks.\nDone when:\n- It downloads' };
+const estimate: EstimateSuggestion = {
+  estimate: 5,
+  priority: 'high',
+  rationale: 'Touches many parts.',
+};
+const description: DescriptionSuggestion = {
+  description: 'Export tasks.\nDone when:\n- It downloads',
+};
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
@@ -107,7 +113,9 @@ describe('AiAssistant', () => {
     expect(sentTo('/tasks/t1')).toBeUndefined();
 
     await user.click(screen.getByRole('button', { name: 'Apply' }));
-    await waitFor(() => expect(sentTo('/tasks/t1')).toEqual({ description: description.description }));
+    await waitFor(() =>
+      expect(sentTo('/tasks/t1')).toEqual({ description: description.description }),
+    );
   });
 
   it('shows an estimate and applies it only when asked', async () => {

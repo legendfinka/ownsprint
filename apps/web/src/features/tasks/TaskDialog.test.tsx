@@ -73,7 +73,9 @@ describe('TaskDialog', () => {
 
     await user.selectOptions(await screen.findByLabelText('Priority'), 'high');
 
-    await waitFor(() => expect(patches()).toEqual([['/api/projects/p/tasks/t1', { priority: 'high' }]]));
+    await waitFor(() =>
+      expect(patches()).toEqual([['/api/projects/p/tasks/t1', { priority: 'high' }]]),
+    );
   });
 
   it('ticks a subtask done and opens it on click', async () => {
@@ -81,7 +83,9 @@ describe('TaskDialog', () => {
     const user = renderDialog();
 
     await user.click(await screen.findByLabelText('Done: Outline'));
-    await waitFor(() => expect(patches()).toEqual([['/api/projects/p/tasks/s1', { status: 'done' }]]));
+    await waitFor(() =>
+      expect(patches()).toEqual([['/api/projects/p/tasks/s1', { status: 'done' }]]),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Outline' }));
     expect(screen.getByTestId('search')).toHaveTextContent('?task=s1');
@@ -97,6 +101,9 @@ describe('TaskDialog', () => {
 
     await user.click(within(confirm).getByRole('button', { name: 'Delete task' }));
     await waitFor(() => expect(screen.getByTestId('search')).toBeEmptyDOMElement());
-    expect(fetch).toHaveBeenCalledWith('/api/projects/p/tasks/t1', expect.objectContaining({ method: 'DELETE' }));
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/projects/p/tasks/t1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 });

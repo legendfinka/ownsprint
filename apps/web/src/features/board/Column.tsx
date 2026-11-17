@@ -21,12 +21,13 @@ interface Props {
   status: TaskStatus;
   title: string;
   tasks: BoardTask[];
+  points: number; // story points of these tasks
   // Set while a card is dragged over this column: it lands below `afterId`.
   dropTarget?: { afterId: string | null };
   children?: ReactNode;
 }
 
-export function Column({ status, title, tasks, dropTarget, children }: Props) {
+export function Column({ status, title, tasks, points, dropTarget, children }: Props) {
   // The column's own drop target (id = status, meaning "the bottom") is a strip
   // below the last card. If it were the whole list, the last card would always
   // win the collision check, and nothing could land below it once the column
@@ -40,7 +41,9 @@ export function Column({ status, title, tasks, dropTarget, children }: Props) {
       title={
         <>
           {title}
-          <span className="ml-auto font-mono text-xs font-normal">[{tasks.length}]</span>
+          <span className="ml-auto font-mono text-xs font-normal">
+            [{tasks.length}] · {points} pts
+          </span>
         </>
       }
     >
@@ -48,7 +51,7 @@ export function Column({ status, title, tasks, dropTarget, children }: Props) {
         <SortableContext items={tasks.map((t) => t.id)} strategy={keepInPlace}>
           <ul
             className={cn(
-              'flex min-h-24 flex-col gap-3 rounded-sm',
+              'flex min-h-24 flex-1 flex-col gap-3 rounded-sm',
               tasks.length === 0 && 'border-2 border-dashed border-foreground/30',
               tasks.length === 0 && dropTarget && 'border-primary bg-primary/10',
             )}

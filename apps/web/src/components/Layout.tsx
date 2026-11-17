@@ -33,8 +33,7 @@ export function Layout() {
         <Outlet />
       </main>
       <footer className="mx-auto w-full max-w-7xl px-4 pb-6 font-mono text-xs text-muted-foreground">
-        © {new Date().getFullYear()} OwnSprint · a small sprint tracker ✦ best viewed
-        in any browser
+        © {new Date().getFullYear()} OwnSprint · a small sprint tracker ✦ best viewed in any browser
       </footer>
     </div>
   );

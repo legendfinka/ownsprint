@@ -20,13 +20,7 @@ import { useProject } from '@/features/projects/queries';
 import { errorMessage, useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
 import { PriorityMark, PriorityOptions, PriorityStamp } from './PriorityStamp';
-import {
-  useCreateSubtask,
-  useDeleteTask,
-  useTask,
-  useTaskParam,
-  useUpdateTask,
-} from './queries';
+import { useCreateSubtask, useDeleteTask, useTask, useTaskParam, useUpdateTask } from './queries';
 
 // The task from ?task=… in a dialog. Esc, the X or a click outside closes it.
 export function TaskDialog({ projectId }: { projectId: string }) {
@@ -49,9 +43,7 @@ function TaskDetails({ projectId, taskId }: { projectId: string; taskId: string 
 
   const title = (
     <>
-      <Dialog.Title render={<span />}>
-        {task?.parentId ? 'Subtask' : 'Task'}
-      </Dialog.Title>
+      <Dialog.Title render={<span />}>{task?.parentId ? 'Subtask' : 'Task'}</Dialog.Title>
       <Dialog.Close aria-label="Close" className="ml-auto rounded-sm hover:opacity-70">
         <X className="size-4" strokeWidth={2.5} />
       </Dialog.Close>
@@ -258,7 +250,9 @@ function Subtasks({ projectId, task }: { projectId: string; task: TaskDetail }) 
             Add
           </Button>
         </div>
-        <ErrorText>{errors.title ?? formError ?? (update.error && errorMessage(update.error))}</ErrorText>
+        <ErrorText>
+          {errors.title ?? formError ?? (update.error && errorMessage(update.error))}
+        </ErrorText>
       </form>
     </section>
   );
