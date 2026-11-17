@@ -8,6 +8,7 @@ import { FormField } from '@/components/FormField';
 import { Select } from '@/components/Select';
 import { Window } from '@/components/Window';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { SprintSummary } from '@/features/ai/SprintSummary';
 import { useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
 import { Board } from './Board';
@@ -51,7 +52,13 @@ export function SprintBoard({ projectId }: { projectId: string }) {
         <NewSprintButton projectId={projectId} onCreated={select} />
       </div>
 
-      {sprint && <Board key={sprint.id} projectId={projectId} sprintId={sprint.id} />}
+      {sprint && (
+        <>
+          {/* keyed: switching sprints starts with a clean summary. */}
+          <SprintSummary key={`summary-${sprint.id}`} projectId={projectId} sprintId={sprint.id} />
+          <Board key={sprint.id} projectId={projectId} sprintId={sprint.id} />
+        </>
+      )}
     </div>
   );
 }
@@ -109,21 +116,21 @@ function NewSprintForm({ projectId, onCreated }: NewSprintProps) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-3">
-        <FormField name="name" label="Name" placeholder="Sprint 1" error={errors.name} />
-        <FormField
-          name="startDate"
-          label="Start"
-          type="date"
-          defaultValue={localDate()}
-          error={errors.startDate}
-        />
-        <FormField
-          name="endDate"
-          label="End"
-          type="date"
-          defaultValue={localDate(13)}
-          error={errors.endDate}
-        />
+      <FormField name="name" label="Name" placeholder="Sprint 1" error={errors.name} />
+      <FormField
+        name="startDate"
+        label="Start"
+        type="date"
+        defaultValue={localDate()}
+        error={errors.startDate}
+      />
+      <FormField
+        name="endDate"
+        label="End"
+        type="date"
+        defaultValue={localDate(13)}
+        error={errors.endDate}
+      />
       <ErrorText>{formError}</ErrorText>
       <Button type="submit" disabled={createSprint.isPending}>
         Create sprint

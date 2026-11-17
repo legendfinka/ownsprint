@@ -35,7 +35,7 @@ export function useTask(projectId: string, taskId: string) {
 
 // A task change can show up on any board and in any open task (its parent's
 // subtask list), so refetch both.
-function useRefreshTasks(projectId: string) {
+export function useRefreshTasks(projectId: string) {
   const queryClient = useQueryClient();
   return () =>
     Promise.all([

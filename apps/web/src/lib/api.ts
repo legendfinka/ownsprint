@@ -46,10 +46,29 @@ export function refreshAccessToken(): Promise<string | null> {
 interface Options {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
+  signal?: AbortSignal; // lets the caller cancel the request
 }
 
 // api<ProjectListResponse>('/projects') → GET /api/projects
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
+  const res = await sendAuthed(path, options);
+  if (!res.ok) throw await toApiError(res);
+  return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+// For responses read piece by piece (server-sent events). Same login handling
+// as api(); returns the body to read, or throws the API's error.
+export async function apiStream(
+  path: string,
+  options: Options = {},
+): Promise<ReadableStream<Uint8Array>> {
+  const res = await sendAuthed(path, options);
+  if (!res.ok) throw await toApiError(res);
+  if (!res.body) throw new ApiError(res.status, 'INTERNAL_ERROR', 'The server sent no data');
+  return res.body;
+}
+
+async function sendAuthed(path: string, options: Options): Promise<Response> {
   let res = await send(path, options);
 
   // Expired access token: renew it and try once more. Auth endpoints answer
@@ -61,12 +80,10 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
       onSessionExpired();
     }
   }
-
-  if (!res.ok) throw await toApiError(res);
-  return (res.status === 204 ? undefined : await res.json()) as T;
+  return res;
 }
 
-function send(path: string, { method = 'GET', body }: Options): Promise<Response> {
+function send(path: string, { method = 'GET', body, signal }: Options): Promise<Response> {
   const headers: Record<string, string> = {};
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -75,6 +92,7 @@ function send(path: string, { method = 'GET', body }: Options): Promise<Response
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
   });
 }
 
