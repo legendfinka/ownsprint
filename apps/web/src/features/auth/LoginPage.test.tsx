@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { DEMO_ACCOUNT } from '@ownsprint/shared';
 import { LoginPage } from './LoginPage';
 
 function renderLoginPage() {
@@ -53,6 +54,33 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Projects page')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/login', expect.anything());
+  });
+
+  it('signs in to the demo account with one click', async () => {
+    const fetchMock = mockFetch({
+      user: { id: '1', email: DEMO_ACCOUNT.email, name: 'Demo User', createdAt: '2026-11-16' },
+      accessToken: 'token',
+    });
+    const user = renderLoginPage();
+
+    await user.click(screen.getByRole('button', { name: 'Try demo account' }));
+
+    expect(await screen.findByText('Projects page')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        body: JSON.stringify({ email: DEMO_ACCOUNT.email, password: DEMO_ACCOUNT.password }),
+      }),
+    );
+  });
+
+  it('says so when the demo account cannot be reached', async () => {
+    mockFetch({ error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } }, 401);
+    const user = renderLoginPage();
+
+    await user.click(screen.getByRole('button', { name: 'Try demo account' }));
+
+    expect(await screen.findByText('Invalid email or password')).toBeInTheDocument();
   });
 
   it('shows the server message for wrong credentials', async () => {
