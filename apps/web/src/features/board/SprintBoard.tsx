@@ -13,10 +13,11 @@ import { useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
 import { Board } from './Board';
 import { useCreateSprint, useSprints } from './queries';
+import { SprintActions } from './SprintActions';
 
 // Sprint picker + the board of the chosen sprint. The choice lives in the
 // URL (?sprint=…), so a reload or a shared link opens the same board.
-export function SprintBoard({ projectId }: { projectId: string }) {
+export function SprintBoard({ projectId, isOwner }: { projectId: string; isOwner: boolean }) {
   const { data: sprints, isPending, error } = useSprints(projectId);
   const [params, setParams] = useSearchParams();
 
@@ -32,7 +33,7 @@ export function SprintBoard({ projectId }: { projectId: string }) {
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         {sprint ? (
           <Select
             aria-label="Sprint"
@@ -49,7 +50,17 @@ export function SprintBoard({ projectId }: { projectId: string }) {
         ) : (
           <p className="text-sm text-muted-foreground">No sprints yet. Create one to start.</p>
         )}
-        <NewSprintButton projectId={projectId} onCreated={select} />
+        <div className="flex items-start gap-2">
+          {sprint && (
+            <SprintActions
+              projectId={projectId}
+              sprint={sprint}
+              sprints={sprints}
+              isOwner={isOwner}
+            />
+          )}
+          <NewSprintButton projectId={projectId} onCreated={select} />
+        </div>
       </div>
 
       {sprint && (

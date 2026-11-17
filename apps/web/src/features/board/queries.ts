@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   BoardResponse,
   BoardTask,
+  CompleteSprintInput,
   CreateSprintInput,
   CreateTaskInput,
   Sprint,
@@ -32,6 +33,34 @@ export function useCreateSprint(projectId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: boardKeys.sprints(projectId) }),
   });
 }
+
+// Starting or completing changes the sprint, and completing moves tasks
+// between boards, so the sprints and all the boards of the project reload.
+function useSprintAction<T = void>(
+  projectId: string,
+  sprintId: string,
+  action: 'start' | 'complete',
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: T) =>
+      api<Sprint>(`/projects/${projectId}/sprints/${sprintId}/${action}`, {
+        method: 'POST',
+        body,
+      }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: boardKeys.sprints(projectId) }),
+        queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'board'] }),
+      ]),
+  });
+}
+
+export const useStartSprint = (projectId: string, sprintId: string) =>
+  useSprintAction(projectId, sprintId, 'start');
+
+export const useCompleteSprint = (projectId: string, sprintId: string) =>
+  useSprintAction<CompleteSprintInput>(projectId, sprintId, 'complete');
 
 export function useBoard(projectId: string, sprintId: string) {
   return useQuery({
