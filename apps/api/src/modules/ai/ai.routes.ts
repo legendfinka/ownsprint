@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { taskParamsSchema } from '@ownsprint/shared';
+import { sprintParamsSchema, taskParamsSchema } from '@ownsprint/shared';
 import { env } from '../../config/env';
 import { authenticate } from '../../middleware/authenticate';
 import { createAiRateLimiter } from '../../middleware/rate-limit';
@@ -27,16 +27,23 @@ export function defaultAiProvider(): AiProvider {
   }
 }
 
-// Mounted at /projects/:projectId/tasks/:taskId/ai. Takes the provider as an
-// argument, so tests can pass a fake one.
+// Mounted at /projects/:projectId. Takes the provider as an argument, so
+// tests can pass a fake one.
 export function createAiRouter(provider: AiProvider, rateLimitMax: number): Router {
   const ai = createAiController(createAiService(provider));
   const router = Router({ mergeParams: true });
 
-  router.use(authenticate, createAiRateLimiter(rateLimitMax));
-  router.post('/breakdown', validate({ params: taskParamsSchema }), ai.breakdown);
-  router.post('/estimate', validate({ params: taskParamsSchema }), ai.estimate);
-  router.post('/description', validate({ params: taskParamsSchema }), ai.describe);
+  // On each route, not router.use: this router sits in front of the other
+  // project routes, which must not be rate limited as AI calls. One limiter
+  // instance, so all AI calls share one budget per user.
+  const guard = [authenticate, createAiRateLimiter(rateLimitMax)];
+  const task = validate({ params: taskParamsSchema });
+  router.post('/tasks/:taskId/ai/breakdown', guard, task, ai.breakdown);
+  router.post('/tasks/:taskId/ai/estimate', guard, task, ai.estimate);
+  router.post('/tasks/:taskId/ai/description', guard, task, ai.describe);
+  const sprint = validate({ params: sprintParamsSchema });
+  router.post('/sprints/:sprintId/ai/summary', guard, sprint, ai.summary);
+  router.post('/sprints/:sprintId/ai/estimates', guard, sprint, ai.estimates);
 
   return router;
 }

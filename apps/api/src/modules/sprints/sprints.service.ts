@@ -9,6 +9,15 @@ export async function listSprints(userId: string, projectId: string): Promise<Sp
   return (await repo.list(projectId)).map(toSprint);
 }
 
+export async function getSprintById(
+  userId: string,
+  projectId: string,
+  sprintId: string,
+): Promise<Sprint> {
+  await requireAccess(userId, projectId);
+  return toSprint(await getSprint(projectId, sprintId));
+}
+
 export async function createSprint(
   userId: string,
   projectId: string,

@@ -14,13 +14,33 @@ export class AnthropicProvider implements AiProvider {
     this.client = new Anthropic({ apiKey, timeout: 30_000, maxRetries: 2 });
   }
 
-  async complete({ system, prompt }: AiRequest): Promise<string> {
-    const message = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: 'user', content: prompt }],
-    });
+  async complete({ system, prompt, maxTokens, signal }: AiRequest): Promise<string> {
+    const message = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { signal },
+    );
     return message.content.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('');
+  }
+
+  async *stream({ system, prompt, maxTokens, signal }: AiRequest): AsyncGenerator<string> {
+    const events = this.client.messages.stream(
+      {
+        model: this.model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { signal },
+    );
+    for await (const event of events) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        yield event.delta.text;
+      }
+    }
   }
 }

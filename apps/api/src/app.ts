@@ -34,8 +34,8 @@ export function createApp({
     res.json({ status: 'ok' });
   });
   api.use('/auth', createAuthRouter(authRateLimitMax));
+  api.use('/projects/:projectId', createAiRouter(ai, aiRateLimitMax)); // only /…/ai/… routes
   api.use('/projects/:projectId/sprints', sprintsRouter);
-  api.use('/projects/:projectId/tasks/:taskId/ai', createAiRouter(ai, aiRateLimitMax));
   api.use('/projects/:projectId/tasks', tasksRouter);
   api.use('/projects', projectsRouter);
   app.use('/api', api);

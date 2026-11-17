@@ -9,6 +9,7 @@ const app = createApp({ ai });
 const server = app.listen(env.PORT, () => {
   console.log(`API listening on http://localhost:${String(env.PORT)}`);
   console.log(`AI provider: ${ai.name}`);
+  void ai.warmUp?.(); // in the background: the server doesn't wait for the model
 });
 
 function shutdown(signal: string): void {

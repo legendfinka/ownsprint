@@ -12,5 +12,5 @@ ${JSON_ONLY}
 Shape: {"description":"..."} (use \\n for line breaks inside the string)`;
 
 export function descriptionPrompt(task: TaskDetail) {
-  return { task: 'description' as const, system, prompt: taskContext(task) };
+  return { task: 'description' as const, system, prompt: taskContext(task), maxTokens: 400 };
 }

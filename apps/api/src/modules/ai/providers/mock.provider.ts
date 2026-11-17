@@ -5,7 +5,10 @@ import type {
 } from '@ownsprint/shared';
 import type { AiProvider, AiRequest, AiTask } from './ai-provider';
 
-const answers: Record<AiTask, BreakdownSuggestion | EstimateSuggestion | DescriptionSuggestion> = {
+const answers: Record<
+  Exclude<AiTask, 'summary' | 'estimates'>,
+  BreakdownSuggestion | EstimateSuggestion | DescriptionSuggestion
+> = {
   breakdown: {
     subtasks: [
       { title: 'Clarify requirements and edge cases', priority: 'high', estimate: 1 },
@@ -26,12 +29,48 @@ const answers: Record<AiTask, BreakdownSuggestion | EstimateSuggestion | Descrip
   },
 };
 
+const summary = `Done
+- Mock answer: the tasks in the Done column would be listed here.
+
+Not done
+- Tasks still To Do or In Progress would be listed here.
+
+Risks
+- Set AI_PROVIDER in .env for a real summary of this sprint.`;
+
+// An answer for every numbered line ("1. Title") in the prompt, cycling
+// through 2, 3, 5 and 8 points so the list looks varied.
+function estimatesFor(prompt: string) {
+  const count = (prompt.match(/^\d+\. /gm) ?? []).length;
+  const points = [2, 3, 5, 8] as const;
+  return {
+    estimates: Array.from({ length: count }, (_, i) => ({
+      n: i + 1,
+      estimate: points[i % points.length],
+      rationale: 'Mock answer: a guess. Set AI_PROVIDER for real estimates.',
+    })),
+  };
+}
+
 // Used when AI_PROVIDER is "mock" (the default) and in tests: believable
 // answers, no network, no cost. Answers as JSON text, like a model.
 export class MockAiProvider implements AiProvider {
   readonly name = 'mock (set AI_PROVIDER in .env for real answers)';
 
-  complete({ task }: AiRequest): Promise<string> {
+  // `delayMs` is the pause between streamed words, so the UI looks live.
+  constructor(private readonly delayMs = 30) {}
+
+  complete({ task, prompt }: AiRequest): Promise<string> {
+    if (task === 'summary') return Promise.resolve(summary);
+    if (task === 'estimates') return Promise.resolve(JSON.stringify(estimatesFor(prompt)));
     return Promise.resolve(JSON.stringify(answers[task]));
+  }
+
+  async *stream({ signal }: AiRequest): AsyncGenerator<string> {
+    for (const word of summary.match(/\S+\s*/g) ?? []) {
+      if (signal?.aborted) return;
+      if (this.delayMs) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+      yield word;
+    }
   }
 }
