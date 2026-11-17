@@ -65,6 +65,31 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(client.getQueryData(['session'])).toEqual(saved));
   });
 
+  it('marks no colour on its own, and "Auto" goes back to automatic', async () => {
+    const { calls } = fakeApi(() => json({ user }));
+    const { user: u } = renderPage();
+
+    // Nothing chosen yet: only "Auto" is marked.
+    expect(screen.getByRole('button', { name: 'Automatic colour' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Colour #a8c3a0' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    await u.click(screen.getByRole('button', { name: 'Colour #a8c3a0' }));
+    expect(screen.getByRole('button', { name: 'Colour #a8c3a0' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await u.click(screen.getByRole('button', { name: 'Automatic colour' }));
+    await u.click(screen.getByRole('button', { name: 'Save profile' }));
+
+    await waitFor(() => expect(calls()[0]?.[1]).toMatchObject({ avatarColor: null }));
+  });
+
   it('can go back to initials', async () => {
     const { calls } = fakeApi(() => json({ user }));
     const { user: u } = renderPage();

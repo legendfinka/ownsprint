@@ -8,6 +8,7 @@ import {
 import { Avatar } from '@/components/Avatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ErrorText } from '@/components/ErrorText';
+import { Select } from '@/components/Select';
 import { Window } from '@/components/Window';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,15 +28,11 @@ export function Members({ project }: { project: ProjectDetail }) {
         ))}
       </ul>
       {isOwner && <AddMemberForm projectId={project.id} />}
-      {/* Suggestions for the title field; any text can be typed too. */}
-      <datalist id="member-titles">
-        {MEMBER_TITLES.map((title) => (
-          <option key={title} value={title} />
-        ))}
-      </datalist>
     </Window>
   );
 }
+
+const titles: readonly string[] = MEMBER_TITLES;
 
 interface RowProps {
   projectId: string;
@@ -68,21 +65,25 @@ function MemberRow({ projectId, member, canManage }: RowProps) {
 
       {canManage ? (
         <div className="flex items-center gap-2">
-          {/* Uncontrolled, keyed by the saved title: saves when you leave the field. */}
-          <Input
+          {/* Saves on change. A title set some other way (the API takes any
+              text) stays in the list, so the select can show it. */}
+          <Select
             key={member.title ?? ''}
-            list="member-titles"
             aria-label={`Title of ${member.name}`}
-            placeholder="Add a title"
-            maxLength={40}
             defaultValue={member.title ?? ''}
-            onBlur={(e) => {
-              if (e.target.value.trim() !== (member.title ?? '')) {
-                setTitle.mutate({ userId: member.id, title: e.target.value });
-              }
-            }}
-            className="h-7 text-xs"
-          />
+            onChange={(e) => setTitle.mutate({ userId: member.id, title: e.target.value })}
+            className="flex-1 text-xs"
+          >
+            <option value="">No title</option>
+            {member.title && !titles.includes(member.title) && (
+              <option value={member.title}>{member.title}</option>
+            )}
+            {MEMBER_TITLES.map((title) => (
+              <option key={title} value={title}>
+                {title}
+              </option>
+            ))}
+          </Select>
           {member.role !== 'owner' && (
             <ConfirmDialog
               trigger="Remove"

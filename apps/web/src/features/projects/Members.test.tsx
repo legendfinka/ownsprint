@@ -49,16 +49,27 @@ function renderMembers(role: 'owner' | 'member') {
 }
 
 describe('Members', () => {
-  it('lets the owner set a title, saved when leaving the field', async () => {
+  it('lets the owner pick a title, saved at once', async () => {
     const { calls } = fakeApi();
     const user = renderMembers('owner');
 
-    await user.type(screen.getByLabelText('Title of Mark Member'), 'Tester');
-    expect(calls()).toEqual([]); // not saved while typing
-    await user.tab();
+    await user.selectOptions(screen.getByLabelText('Title of Mark Member'), 'Tester');
 
     await waitFor(() =>
       expect(calls()).toContainEqual(['PATCH /api/projects/p/members/u2', { title: 'Tester' }]),
+    );
+  });
+
+  it('shows the current title and can clear it', async () => {
+    const { calls } = fakeApi();
+    const user = renderMembers('owner');
+    const owner = screen.getByLabelText('Title of Olivia Owner');
+    expect(owner).toHaveValue('Developer');
+
+    await user.selectOptions(owner, 'No title');
+
+    await waitFor(() =>
+      expect(calls()).toContainEqual(['PATCH /api/projects/p/members/u1', { title: '' }]),
     );
   });
 

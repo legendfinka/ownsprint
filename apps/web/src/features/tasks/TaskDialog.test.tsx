@@ -125,6 +125,27 @@ describe('TaskDialog', () => {
     );
   });
 
+  it('shows a task from the board at once, while the rest loads', async () => {
+    // The task request never answers: only the board's copy is available.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const client = new QueryClient();
+    const card = { ...task, subtasks: undefined, subtaskCount: { done: 0, total: 1 } };
+    client.setQueryData(['projects', 'p', 'board', 's'], [card]);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/board?task=t1']}>
+          <TaskDialog projectId="p" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByLabelText('Title')).toHaveValue('Write docs');
+    expect(screen.queryByText('Loading…')).toBeNull();
+  });
+
   it('ticks a subtask done and opens it on click', async () => {
     const { patches } = fakeApi();
     const user = renderDialog();

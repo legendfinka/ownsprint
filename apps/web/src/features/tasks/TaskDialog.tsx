@@ -21,7 +21,14 @@ import { useProject } from '@/features/projects/queries';
 import { errorMessage, useSchemaForm } from '@/lib/forms';
 import { cn } from '@/lib/utils';
 import { PriorityMark, PriorityOptions, PriorityStamp } from './PriorityStamp';
-import { useCreateSubtask, useDeleteTask, useTask, useTaskParam, useUpdateTask } from './queries';
+import {
+  useCreateSubtask,
+  useDeleteTask,
+  useTask,
+  useTaskParam,
+  useUpdateTask,
+  type TaskPreview,
+} from './queries';
 
 // The task from ?task=… in a dialog. Esc, the X or a click outside closes it.
 export function TaskDialog({ projectId }: { projectId: string }) {
@@ -40,7 +47,9 @@ export function TaskDialog({ projectId }: { projectId: string }) {
 }
 
 function TaskDetails({ projectId, taskId }: { projectId: string; taskId: string }) {
-  const { data: task, isPending, error } = useTask(projectId, taskId);
+  const { data: task, isPending, isPlaceholderData, error } = useTask(projectId, taskId);
+  // While the full task loads, the subtask list keeps room for the ones expected.
+  const loadingSubtasks = isPlaceholderData ? (task as TaskPreview).expectedSubtasks : null;
 
   const title = (
     <>
@@ -54,16 +63,29 @@ function TaskDetails({ projectId, taskId }: { projectId: string; taskId: string 
   return (
     <Window icon={FileText} title={title}>
       {isPending && <p className="p-5 font-mono text-sm text-muted-foreground">Loading…</p>}
-      {error && <ErrorText>{error.message}</ErrorText>}
+      {error && <ErrorText persistent>{error.message}</ErrorText>}
       {/* key: switching to another task resets the uncontrolled fields. */}
-      {task && <TaskFields key={task.id} projectId={projectId} task={task} />}
+      {task && (
+        <TaskFields
+          key={task.id}
+          projectId={projectId}
+          task={task}
+          loadingSubtasks={loadingSubtasks}
+        />
+      )}
     </Window>
   );
 }
 
 // Each field saves on its own (on change or when leaving it), like in Jira:
 // no "Save" button to forget, and the server validates every change.
-function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }) {
+interface FieldsProps {
+  projectId: string;
+  task: TaskDetail;
+  loadingSubtasks: number | null; // how many are expected while loading, else null
+}
+
+function TaskFields({ projectId, task, loadingSubtasks }: FieldsProps) {
   const [, openTask] = useTaskParam();
   const members = useProject(projectId).data?.members ?? [];
   const sprints = useSprints(projectId).data ?? [];
@@ -199,7 +221,9 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
 
       <AiAssistant projectId={projectId} task={task} />
 
-      {!task.parentId && <Subtasks projectId={projectId} task={task} />}
+      {!task.parentId && (
+        <Subtasks projectId={projectId} task={task} loadingSubtasks={loadingSubtasks} />
+      )}
 
       <div className="flex justify-end border-t-2 border-dashed pt-4">
         <ConfirmDialog
@@ -221,7 +245,7 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
   );
 }
 
-function Subtasks({ projectId, task }: { projectId: string; task: TaskDetail }) {
+function Subtasks({ projectId, task, loadingSubtasks }: FieldsProps) {
   const [, openTask] = useTaskParam();
   const update = useUpdateTask(projectId);
   const createSubtask = useCreateSubtask(projectId, task);
@@ -236,10 +260,24 @@ function Subtasks({ projectId, task }: { projectId: string; task: TaskDetail }) 
       <h3 className="flex items-baseline font-heading font-semibold">
         Subtasks
         <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">
-          {done}/{task.subtasks.length} done
+          {loadingSubtasks === null ? `${String(done)}/${String(task.subtasks.length)} done` : '…'}
         </span>
       </h3>
-      <ul className="grid gap-1.5">
+      <ul className="grid gap-1.5" aria-busy={loadingSubtasks !== null}>
+        {/* Empty rows built like the real ones (same height), so the dialog
+            doesn't jump when the subtasks arrive. */}
+        {Array.from({ length: loadingSubtasks ?? 0 }, (_, i) => (
+          <li
+            key={i}
+            aria-hidden
+            className="flex items-center gap-2 rounded-sm border-2 bg-muted px-2 py-1.5 text-sm"
+          >
+            <span className="invisible flex items-center gap-2">
+              <input type="checkbox" tabIndex={-1} className="size-4" />
+              <PriorityStamp priority="low" />
+            </span>
+          </li>
+        ))}
         {task.subtasks.map((subtask) => (
           <li
             key={subtask.id}

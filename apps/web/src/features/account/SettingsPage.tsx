@@ -132,6 +132,11 @@ function ProfileForm({ user }: { user: PublicUser }) {
         <input type="hidden" name="avatarEmoji" value={emoji ?? ''} />
 
         <div role="group" aria-label="Avatar colour" className="flex flex-wrap gap-2">
+          {/* "Auto" is a real choice, like "Initials" below: no swatch is
+              marked unless you picked it. */}
+          <Choice label="Automatic colour" selected={color === null} onClick={() => setColor(null)}>
+            <span className="text-xs">Auto</span>
+          </Choice>
           {AVATAR_COLORS.map((value) => (
             <Choice
               key={value}

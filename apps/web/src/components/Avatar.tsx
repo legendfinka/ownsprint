@@ -1,15 +1,6 @@
 import type { Avatar as AvatarChoice } from '@ownsprint/shared';
+import { defaultAvatarColor } from '@/lib/avatar';
 import { cn } from '@/lib/utils';
-
-// Muted vintage tones. Dark ink text reads well on all of them, in both themes.
-const colors = ['bg-[#e8c468]', 'bg-[#a8c3a0]', 'bg-[#9db4d6]', 'bg-[#e2a48a]', 'bg-[#c4b2d6]'];
-
-// The same name always gets the same color.
-function colorFor(name: string): string {
-  let hash = 0;
-  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  return colors[Math.abs(hash) % colors.length] ?? '';
-}
 
 // "Ann Lee" → "AL", "oleh_liubichenko" → "OL", "Ann" → "AN".
 function initials(name: string): string {
@@ -29,10 +20,9 @@ export function Avatar({ name, avatarColor, avatarEmoji, className }: Props) {
   return (
     <span
       aria-hidden
-      style={avatarColor ? { backgroundColor: avatarColor } : undefined}
+      style={{ backgroundColor: avatarColor ?? defaultAvatarColor(name) }}
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-sm border-2 border-foreground font-heading text-xs font-bold text-[#2b2522]',
-        !avatarColor && colorFor(name),
         className,
       )}
     >
