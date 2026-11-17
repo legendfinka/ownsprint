@@ -20,31 +20,20 @@ Out of scope (do NOT build unless asked): comments, notifications, file attachme
 
 ## Tech stack
 
-Monorepo with pnpm workspaces:
+pnpm monorepo: `apps/web` (React + Vite), `apps/api` (Express), `packages/shared` (Zod schemas + types), `docker-compose.yml`, `.github/workflows/ci.yml`.
 
-```
-ownsprint/
-├── apps/
-│   ├── web/        # React + Vite + TypeScript
-│   └── api/        # Node.js + Express + TypeScript
-├── packages/
-│   └── shared/     # Zod schemas + inferred types shared by web and api
-├── docker-compose.yml
-└── .github/workflows/ci.yml
-```
-
-- **Frontend:** React, TypeScript (strict), Vite, TanStack Query, React Router, Tailwind CSS + shadcn/ui, dnd-kit
-- **Backend:** Express, TypeScript (strict), Prisma, PostgreSQL, Zod
-- **Auth:** short-lived JWT access token (in memory on the client) + rotating refresh token in an httpOnly, Secure, SameSite cookie. Refresh tokens are stored hashed in the DB so they can be revoked.
-- **AI:** provider-agnostic `AiProvider` interface with implementations for Anthropic/OpenAI and a `MockAiProvider` (used when no API key is set and in tests)
-- **Testing:** Vitest + Supertest (API), Vitest + Testing Library (web)
-- **Deployment:** web on Vercel, API on Render or Railway, Postgres on Neon
+- **Web:** React, TS strict, Vite, TanStack Query, React Router, Tailwind + shadcn/ui, dnd-kit
+- **API:** Express, TS strict, Prisma, PostgreSQL, Zod
+- **Auth:** short-lived JWT in memory + rotating refresh token in an httpOnly, Secure, SameSite cookie (stored hashed, revocable)
+- **AI:** provider-agnostic `AiProvider` (mock, ollama, anthropic); mock when no key and in tests
+- **Tests:** Vitest + Supertest (API), Vitest + Testing Library (web)
+- **Deploy:** Vercel (web), Render or Railway (API), Neon (Postgres)
 
 ## Data model
 
-- `User`: id, email (unique), passwordHash, name, createdAt
+- `User`: id, email (unique), passwordHash, firstName, lastName, avatarColor?, avatarEmoji?, createdAt
 - `Project`: id, name, ownerId, createdAt
-- `Membership`: userId, projectId, role (`owner` | `member`), unique(userId, projectId)
+- `Membership`: userId, projectId, role (`owner` | `member`), title?, unique(userId, projectId)
 - `Sprint`: id, projectId, name, startDate, endDate, status (`planned` | `active` | `completed`)
 - `Task`: id, projectId, sprintId?, parentId?, title, description, status (`todo` | `in_progress` | `done`), priority (`low` | `medium` | `high`), estimate?, assigneeId?, position, createdAt, updatedAt
 - `RefreshToken`: id, userId, tokenHash, expiresAt, revokedAt?
@@ -83,19 +72,16 @@ ownsprint/
 
 ## Commands (keep this section up to date)
 
-- `pnpm install` — install dependencies (also runs `prisma generate` for the api)
-- `cp apps/api/.env.example apps/api/.env` — first-time local env setup
-- `docker compose up -d` — start Postgres (first start also creates the `ownsprint_test` database)
-- `pnpm dev` — run web (http://localhost:5173) and api (http://localhost:4000) in dev mode
-- `pnpm lint` / `pnpm typecheck` / `pnpm test` — must all pass before committing
-- `pnpm --filter api test:watch` — API tests in watch mode (tests use `ownsprint_test`, never the dev database)
-- `pnpm --filter web test:watch` — web tests in watch mode
-- The API is served under `/api`; in dev, Vite proxies `/api` to http://localhost:4000
-- AI: `AI_PROVIDER` in `apps/api/.env` picks `mock` (default, no setup), `ollama` (free, local) or `anthropic` (needs `ANTHROPIC_API_KEY`); setup steps are in `.env.example`. Tests always use the mock.
-- `pnpm format` / `pnpm format:check` — Prettier (format check runs in CI)
-- `pnpm --filter api db:migrate` — create/apply migrations (`prisma migrate dev`)
-- `pnpm --filter api db:generate` — regenerate the Prisma client after schema changes
-- `pnpm --filter api seed` — seed demo data (added in step 9)
+- `pnpm install` — install deps (runs `prisma generate`)
+- `cp apps/api/.env.example apps/api/.env` — first-time env
+- `docker compose up -d` — Postgres (also creates `ownsprint_test`)
+- `pnpm dev` — web :5173, api :4000 (API under `/api`, Vite proxies)
+- `pnpm lint` / `typecheck` / `test` — must pass before committing
+- `pnpm --filter api|web test:watch` — watch mode (API tests use `ownsprint_test`)
+- `AI_PROVIDER` in `apps/api/.env`: `mock` (default), `ollama` or `anthropic` (`ANTHROPIC_API_KEY`); tests use the mock
+- `pnpm format` / `format:check` — Prettier (checked in CI)
+- `pnpm --filter api db:migrate` / `db:generate` — migrations / Prisma client
+- `pnpm --filter api seed` — demo data (step 9)
 
 ## CI
 
@@ -103,23 +89,26 @@ GitHub Actions on push and PR: install → lint → typecheck → test (API test
 
 ## Implementation plan
 
-Work in this order. Finish and verify each step (lint, typecheck, tests) before starting the next one.
+Verify each step (lint, typecheck, tests) before the next. Steps 1–8 are done.
 
-1. Monorepo setup, Docker Compose (Postgres), Prisma schema + first migration, ESLint/Prettier, CI with lint + typecheck
-2. Auth: register, login, refresh with rotation, logout, auth middleware, tests
-3. Projects + memberships, role checks, authorization tests
+1. Monorepo, Docker, Prisma, ESLint/Prettier, CI
+2. Auth
+3. Projects + memberships, role checks
 4. Sprints + tasks CRUD, filters, pagination
-5. Web: auth pages, project list, base layout
-6. Kanban board with drag-and-drop, persisted positions, optimistic updates
-7. AI: task breakdown + estimation (Zod-validated JSON)
-8. AI: streamed sprint summary (SSE), AI rate limiting
-9. Deployment, seed script with demo data, "Try demo account" button
-10. README: GIF demo, architecture diagram (Mermaid), "Key decisions" section, setup instructions
+5. Web: auth pages, project list, layout
+6. Kanban with drag-and-drop
+7. AI: breakdown + estimation
+8. AI: streamed sprint summary (SSE), rate limiting
+9. Deployment, seed script, "Try demo account" button
+10. README: GIF, Mermaid diagram, "Key decisions", setup, note: no email verification
+
+Pending: sprint start/complete (planned→active→completed; complete is owner-only, unfinished tasks go to the next planned sprint or backlog in one transaction; completed sprints reject new tasks with 409), task search/filters UI.
 
 ## Working style
 
-- Before writing code for a step, briefly state the plan and the files you will touch.
-- After each step, explain the key design decisions in 3–5 bullet points so the developer can defend them in a technical interview.
-- Prefer simple, readable solutions over clever ones. No unnecessary dependencies.
-- Never say something works without running lint, typecheck and tests first and showing the result.
-- When something fails, find the root cause before changing code. No guess-and-retry fixes.
+- Answers: no pleasantries or explanations; short, simple conclusions.
+- Before coding a step: short plan + files. After: 3–5 interview bullets + suggested commits (short, plain, Conventional prefix, ~40 chars, no scopes).
+- Short, clean code and comments. Simple over clever; no needless dependencies.
+- Never claim it works without running lint, typecheck, tests and showing results.
+- On failure find the root cause first; no guess-and-retry.
+- User runs installs, docker, prisma, `pnpm format` and commits.
