@@ -133,7 +133,7 @@ export function TaskList({ projectId }: { projectId: string }) {
           <div className="overflow-x-auto">
             {/* Fixed layout: the columns keep their width, the task title takes the
                 rest and is cut with "…" (the full title is in the tooltip). */}
-            <table className="w-full min-w-[44rem] table-fixed text-left text-sm">
+            <table className="w-full min-w-176 table-fixed text-left text-sm">
               <colgroup>
                 <col />
                 <col className="w-28" />
