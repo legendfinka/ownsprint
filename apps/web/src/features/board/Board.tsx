@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -29,8 +30,10 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
   // Where the dragged card would land right now (null = back where it was).
   const [preview, setPreview] = useState<Move | null>(null);
   const sensors = useSensors(
-    // A small distance, so a click on a card is not a drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Mouse: a small distance, so a click on a card is not a drag.
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Touch: press and hold to lift a card, so a normal swipe still scrolls.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     // Only Space lifts a card; Enter is kept for opening it.
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -78,18 +81,22 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
         onDragEnd={onDragEnd}
         onDragCancel={onDragCancel}
       >
-        <div className="grid gap-4 md:grid-cols-3">
+        {/* Phones: one column per screen, swiped sideways and snapping into
+            place (the next one peeks in). Wider screens: three side by side. */}
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pb-0">
           {COLUMNS.map(({ status, title }) => (
-            <Column
-              key={status}
-              status={status}
-              title={title}
-              tasks={tasks.filter((t) => t.status === status)}
-              points={points.byStatus[status]}
-              dropTarget={preview?.status === status ? preview : undefined}
-            >
-              {status === 'todo' && <AddTaskForm projectId={projectId} sprintId={sprintId} />}
-            </Column>
+            // grid: the column stretches to the tallest one, like before.
+            <div key={status} className="grid w-[85%] shrink-0 snap-center md:w-auto">
+              <Column
+                status={status}
+                title={title}
+                tasks={tasks.filter((t) => t.status === status)}
+                points={points.byStatus[status]}
+                dropTarget={preview?.status === status ? preview : undefined}
+              >
+                {status === 'todo' && <AddTaskForm projectId={projectId} sprintId={sprintId} />}
+              </Column>
+            </div>
           ))}
         </div>
         {/* The card under the pointer, drawn above every column. */}

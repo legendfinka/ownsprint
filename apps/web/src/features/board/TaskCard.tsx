@@ -71,7 +71,9 @@ export function SortableTaskCard({ task, dropLine }: Props) {
     <li
       ref={setNodeRef}
       className={cn(
-        'relative rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dotted focus-visible:outline-ring',
+        // select-none and no callout: a long press lifts the card instead of
+        // selecting its text or opening the phone's menu.
+        'relative rounded-sm outline-none select-none [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dotted focus-visible:outline-ring',
         isDragging && 'opacity-30',
         dropLine && dropLineClass[dropLine],
       )}
