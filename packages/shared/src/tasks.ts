@@ -34,6 +34,27 @@ export const updateTaskSchema = z
   .refine((input) => Object.keys(input).length > 0, 'Nothing to update');
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 
+// Saving several subtasks at once (e.g. the AI breakdown the user confirmed).
+// replace: true deletes the task's current subtasks first, in the same transaction.
+export const createSubtasksSchema = z.object({
+  subtasks: z
+    .array(
+      z.object({
+        title,
+        priority: prioritySchema.default('medium'),
+        estimate: estimate.nullable().default(null),
+      }),
+    )
+    .min(1)
+    .max(20),
+  replace: z.boolean().default(false),
+});
+export type CreateSubtasksInput = z.infer<typeof createSubtasksSchema>;
+
+export interface SubtaskListResponse {
+  subtasks: Task[];
+}
+
 // Drag-and-drop on the board: the target column and the card to land below
 // (null = top of the column). The server works out the position itself.
 export const moveTaskSchema = z.object({

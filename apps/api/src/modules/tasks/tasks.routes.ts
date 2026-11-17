@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  createSubtasksSchema,
   createTaskSchema,
   moveTaskSchema,
   projectParamsSchema,
@@ -27,6 +28,11 @@ tasksRouter.patch(
   '/:taskId',
   validate({ params: taskParamsSchema, body: updateTaskSchema }),
   tasks.update,
+);
+tasksRouter.post(
+  '/:taskId/subtasks',
+  validate({ params: taskParamsSchema, body: createSubtasksSchema }),
+  tasks.createSubtasks,
 );
 tasksRouter.post(
   '/:taskId/move',

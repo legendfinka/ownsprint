@@ -87,6 +87,20 @@ export function create(data: Prisma.TaskUncheckedCreateInput) {
   return prisma.task.create({ data });
 }
 
+// One INSERT for all rows: either every subtask is saved or none is.
+export function createMany(data: Prisma.TaskCreateManyInput[]) {
+  return prisma.task.createManyAndReturn({ data });
+}
+
+// Swap a task's subtasks for new ones. One transaction: if the insert fails,
+// the old subtasks are still there.
+export function replaceSubtasks(parentId: string, data: Prisma.TaskCreateManyInput[]) {
+  return prisma.$transaction(async (tx) => {
+    await tx.task.deleteMany({ where: { parentId } });
+    return tx.task.createManyAndReturn({ data });
+  });
+}
+
 export function update(taskId: string, data: Prisma.TaskUncheckedUpdateInput) {
   return prisma.task.update({ where: { id: taskId }, data });
 }

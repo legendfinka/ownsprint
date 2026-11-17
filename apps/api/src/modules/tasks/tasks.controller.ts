@@ -1,9 +1,11 @@
 import type { Request, Response } from 'express';
 import type {
   BoardResponse,
+  CreateSubtasksInput,
   CreateTaskInput,
   MoveTaskInput,
   Page,
+  SubtaskListResponse,
   Task,
   TaskDetail,
   TaskQuery,
@@ -30,6 +32,16 @@ export async function create(req: Request, res: Response<Task>): Promise<void> {
   const { projectId } = req.params as Params;
   const input = req.body as CreateTaskInput;
   res.status(201).json(await tasks.createTask(requireUserId(req), projectId, input));
+}
+
+export async function createSubtasks(
+  req: Request,
+  res: Response<SubtaskListResponse>,
+): Promise<void> {
+  const { projectId, taskId } = req.params as Params;
+  const input = req.body as CreateSubtasksInput;
+  const subtasks = await tasks.createSubtasks(requireUserId(req), projectId, taskId, input);
+  res.status(201).json({ subtasks });
 }
 
 export async function update(req: Request, res: Response<Task>): Promise<void> {

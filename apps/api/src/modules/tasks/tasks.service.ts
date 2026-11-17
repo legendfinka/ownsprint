@@ -1,5 +1,6 @@
 import type {
   BoardResponse,
+  CreateSubtasksInput,
   CreateTaskInput,
   MoveTaskInput,
   Page,
@@ -45,6 +46,36 @@ export async function createTask(
 
   const position = await repo.nextPosition(projectId, input.sprintId, 'todo');
   return toTask(await repo.create({ ...input, projectId, position }));
+}
+
+// Several subtasks at once, e.g. an AI breakdown the user confirmed.
+// With `replace`, they take the place of the current subtasks.
+export async function createSubtasks(
+  userId: string,
+  projectId: string,
+  taskId: string,
+  input: CreateSubtasksInput,
+): Promise<Task[]> {
+  await requireAccess(userId, projectId);
+  const parent = await getOwnTask(projectId, taskId);
+  if (parent.parentId) {
+    throw ValidationError.fields({ taskId: 'Subtasks cannot have their own subtasks' });
+  }
+
+  // Same sprint as the parent, in order, at the bottom of To Do.
+  const first = await repo.nextPosition(projectId, parent.sprintId, 'todo');
+  const rows = input.subtasks.map((subtask, i) => ({
+    ...subtask,
+    projectId,
+    parentId: parent.id,
+    sprintId: parent.sprintId,
+    position: first + i * 1000,
+  }));
+
+  const saved = input.replace
+    ? await repo.replaceSubtasks(parent.id, rows)
+    : await repo.createMany(rows);
+  return saved.map(toTask);
 }
 
 export async function updateTask(
