@@ -21,7 +21,7 @@ export function ProjectsPage() {
       </div>
 
       {isPending && <p className="font-mono text-sm text-muted-foreground">Loading projects…</p>}
-      <ErrorText>{error?.message}</ErrorText>
+      <ErrorText persistent>{error?.message}</ErrorText>
       {projects?.length === 0 && (
         <div className="grid place-items-center gap-1 rounded-sm border-2 border-dashed py-16 text-center">
           <p className="font-heading text-lg font-bold">Nothing here yet.</p>
@@ -62,7 +62,8 @@ function NewProjectForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex items-start gap-2">
-      <div className="grid gap-1">
+      {/* Fixed width: a long error wraps instead of stretching the field. */}
+      <div className="grid w-64 max-w-full gap-1">
         <Input name="name" placeholder="New project name" aria-label="New project name" />
         <ErrorText>{errors.name ?? formError}</ErrorText>
       </div>

@@ -123,7 +123,7 @@ export function TaskList({ projectId }: { projectId: string }) {
           <p className="p-5 text-sm text-muted-foreground">Loading tasks…</p>
         ) : error ? (
           <div className="p-5">
-            <ErrorText>{error.message}</ErrorText>
+            <ErrorText persistent>{error.message}</ErrorText>
           </div>
         ) : data.items.length === 0 ? (
           <p className="p-5 text-sm text-muted-foreground">

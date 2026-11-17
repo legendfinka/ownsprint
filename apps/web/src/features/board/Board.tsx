@@ -51,7 +51,7 @@ export function Board({ projectId, sprintId }: { projectId: string; sprintId: st
   );
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading board…</p>;
-  if (error) return <ErrorText>{error.message}</ErrorText>;
+  if (error) return <ErrorText persistent>{error.message}</ErrorText>;
 
   // The same function decides the preview and the drop, so they always agree.
   const moveFor = ({ active, over }: DragOverEvent) =>

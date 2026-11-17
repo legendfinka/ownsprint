@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { ApiError } from './api';
 
 // Field name → first error message, e.g. { email: 'Invalid email address' }.
@@ -31,8 +32,13 @@ export function useSchemaForm<T>(
     event.preventDefault();
     const form = event.currentTarget;
     const result = schema.safeParse(readForm(form));
-    setErrors(result.success ? {} : firstErrors(result.error.issues));
-    setFormError(undefined);
+    // Clear first, in its own render: an error that already faded out (see
+    // ErrorText) shows again when the same mistake is submitted again.
+    flushSync(() => {
+      setErrors({});
+      setFormError(undefined);
+    });
+    if (!result.success) setErrors(firstErrors(result.error.issues));
     if (!result.success) return;
 
     onValid(result.data, form).catch((error: unknown) => {

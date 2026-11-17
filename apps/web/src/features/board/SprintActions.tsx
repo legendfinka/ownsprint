@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { Flag } from 'lucide-react';
 import type { Sprint } from '@ownsprint/shared';
@@ -20,14 +20,6 @@ interface Props {
 // Planned → Start. Active → Complete (owner). Completed sprints have no action.
 export function SprintActions({ projectId, sprint, sprints, isOwner }: Props) {
   const start = useStartSprint(projectId, sprint.id);
-  const { error, reset } = start;
-
-  // The error goes away by itself after 5 seconds.
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(reset, 5000);
-    return () => clearTimeout(timer);
-  }, [error, reset]);
 
   if (sprint.status === 'planned') {
     return (
@@ -35,13 +27,11 @@ export function SprintActions({ projectId, sprint, sprints, isOwner }: Props) {
         <Button onClick={() => start.mutate()} disabled={start.isPending}>
           Start sprint
         </Button>
-        {/* Floats under the button, so the toolbar doesn't jump. */}
-        {error && (
-          // Visible for 4 s, then fades out over 1 s, just before the reset.
-          <div className="absolute top-full right-0 z-10 mt-2 w-max max-w-72 animate-out fade-out fill-mode-forwards duration-1000 [animation-delay:4s]">
-            <ErrorText>{error.message}</ErrorText>
-          </div>
-        )}
+        {/* Floats under the button, so the toolbar doesn't jump. It fades
+            out by itself (ErrorText); a new click clears the old error. */}
+        <div className="absolute top-full right-0 z-10 mt-2 w-max max-w-72">
+          <ErrorText>{start.error?.message}</ErrorText>
+        </div>
       </div>
     );
   }
