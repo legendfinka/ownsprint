@@ -1,14 +1,46 @@
-import { Users } from 'lucide-react';
-import { Link, useParams } from 'react-router';
-import { Avatar } from '@/components/Avatar';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { ErrorText } from '@/components/ErrorText';
-import { Window } from '@/components/Window';
 import { SprintBoard } from '@/features/board/SprintBoard';
+import { TaskList } from '@/features/tasks/TaskList';
+import { cn } from '@/lib/utils';
+import { Members } from './Members';
 import { useProject } from './queries';
+
+type View = 'board' | 'tasks';
+const VIEWS: { view: View; label: string }[] = [
+  { view: 'board', label: 'Board' },
+  { view: 'tasks', label: 'All tasks' },
+];
+
+// Board or task list. The choice lives in the URL (?view=tasks); switching
+// starts with clean params, so a filter or sprint doesn't leak into the other view.
+function ViewTabs({ view, onChange }: { view: View; onChange: (view: View) => void }) {
+  return (
+    <nav aria-label="View" className="flex gap-2">
+      {VIEWS.map((v) => (
+        <button
+          key={v.view}
+          type="button"
+          aria-current={view === v.view ? 'page' : undefined}
+          onClick={() => onChange(v.view)}
+          className={cn(
+            'rounded-sm border-2 px-3 py-1 text-sm font-semibold hover:border-foreground',
+            view === v.view ? 'border-foreground bg-foreground text-background' : 'border-border',
+          )}
+        >
+          {v.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 export function ProjectPage() {
   const { projectId = '' } = useParams();
   const { data: project, isPending, error } = useProject(projectId);
+  const [params, setParams] = useSearchParams();
+  const view: View = params.get('view') === 'tasks' ? 'tasks' : 'board';
+  const setView = (next: View) => setParams(next === 'tasks' ? { view: next } : {});
 
   if (isPending) return <p className="font-mono text-sm text-muted-foreground">Loading project…</p>;
   if (error) {
@@ -33,26 +65,16 @@ export function ProjectPage() {
 
       {/* minmax(0, 1fr): let the board shrink instead of pushing Members off-screen. */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <SprintBoard projectId={projectId} />
+        <div className="grid gap-4">
+          <ViewTabs view={view} onChange={setView} />
+          {view === 'tasks' ? (
+            <TaskList projectId={projectId} />
+          ) : (
+            <SprintBoard projectId={projectId} isOwner={project.role === 'owner'} />
+          )}
+        </div>
 
-        <Window icon={Users} title={`Members (${project.members.length})`}>
-          <ul className="grid gap-3 p-4">
-            {project.members.map((member) => (
-              <li key={member.id} className="flex items-center gap-3 text-sm">
-                <Avatar name={member.name} />
-                <span className="grid min-w-0">
-                  <span className="truncate font-medium">{member.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">{member.email}</span>
-                </span>
-                {member.role === 'owner' && (
-                  <span className="ml-auto border px-1.5 font-mono text-[11px] tracking-wider uppercase">
-                    Owner
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Window>
+        <Members project={project} />
       </div>
     </div>
   );

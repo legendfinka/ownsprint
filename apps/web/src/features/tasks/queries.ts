@@ -1,10 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateSubtasksInput,
   CreateTaskInput,
+  Page,
   SubtaskListResponse,
   Task,
   TaskDetail,
+  TaskQuery,
   UpdateTaskInput,
 } from '@ownsprint/shared';
 import { useSearchParams } from 'react-router';
@@ -24,6 +26,20 @@ export function useTaskParam() {
       return next;
     });
   return [params.get('task'), openTask] as const;
+}
+
+// One page of the project's tasks, filtered on the server. The previous page
+// stays on screen while the next one loads, so the list doesn't flash empty.
+export function useTasks(projectId: string, query: TaskQuery) {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(name, String(value));
+  }
+  return useQuery({
+    queryKey: ['projects', projectId, 'tasks', 'list', query],
+    queryFn: () => api<Page<Task>>(`/projects/${projectId}/tasks?${params}`),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useTask(projectId: string, taskId: string) {
