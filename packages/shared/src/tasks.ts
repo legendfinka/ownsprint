@@ -4,9 +4,14 @@ import { projectParamsSchema } from './projects';
 
 export const taskParamsSchema = projectParamsSchema.extend({ taskId: z.uuid() });
 
-const title = z.string().trim().min(1).max(200);
-const description = z.string().max(5000);
-const estimate = z.number().int().min(0).max(100); // story points
+const title = z.string().trim().min(1, 'Title is required').max(200, 'Title is too long');
+const description = z.string().max(5000, 'Description is too long');
+// story points
+const estimate = z
+  .number('Enter a number')
+  .int('Use a whole number')
+  .min(0, 'Cannot be negative')
+  .max(100, 'Use 100 points or fewer');
 
 export const createTaskSchema = z.object({
   title,

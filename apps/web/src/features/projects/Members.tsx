@@ -106,7 +106,7 @@ function MemberRow({ projectId, member, canManage }: RowProps) {
           </span>
         )
       )}
-      <ErrorText compact>{setTitle.error && errorMessage(setTitle.error)}</ErrorText>
+      <ErrorText>{setTitle.error && errorMessage(setTitle.error)}</ErrorText>
     </li>
   );
 }

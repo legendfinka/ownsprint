@@ -43,6 +43,17 @@ describe('ProjectTitle', () => {
     );
   });
 
+  it('says in plain words that the name is required', async () => {
+    const { fetchMock, user } = renderTitle('owner');
+
+    await user.click(screen.getByRole('button', { name: 'Rename project' }));
+    await user.clear(screen.getByLabelText('Project name'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Name is required')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('cancels with Escape, without saving', async () => {
     const { fetchMock, user } = renderTitle('owner');
 

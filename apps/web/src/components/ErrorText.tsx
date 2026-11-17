@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   id?: string;
-  compact?: boolean; // no box: for a message right under one field
   persistent?: boolean; // stays: for a page that failed to load
   children?: ReactNode;
 }
@@ -14,7 +13,7 @@ const VISIBLE_MS = 5000;
 // An error notice: ink-red border, tinted fill, warning icon. Renders nothing
 // when there's no error. Screen readers announce it when it appears.
 // A message fades out after 5 s; when it comes back, it shows again.
-export function ErrorText({ id, compact, persistent, children }: Props) {
+export function ErrorText({ id, persistent, children }: Props) {
   const [expired, setExpired] = useState<ReactNode>(null);
   const fades = !persistent && typeof children === 'string';
 
@@ -34,8 +33,7 @@ export function ErrorText({ id, compact, persistent, children }: Props) {
       id={id}
       role="alert"
       className={cn(
-        'flex items-start gap-2 text-sm font-medium text-destructive',
-        !compact && 'rounded-sm border-2 border-destructive bg-destructive/10 px-3 py-2',
+        'flex items-start gap-2 rounded-sm border-2 border-destructive bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive',
         // Fully visible for 4 s, then fades out over the last second.
         fades && 'animate-out fill-mode-forwards fade-out duration-1000 [animation-delay:4s]',
       )}

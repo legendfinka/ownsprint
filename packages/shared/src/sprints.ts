@@ -5,9 +5,9 @@ import { projectParamsSchema } from './projects';
 export const sprintParamsSchema = projectParamsSchema.extend({ sprintId: z.uuid() });
 
 export const createSprintSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  startDate: z.iso.date(), // "2026-11-16"
-  endDate: z.iso.date(),
+  name: z.string().trim().min(1, 'Name is required').max(100, 'Name is too long'),
+  startDate: z.iso.date('Pick a start date'), // "2026-11-16"
+  endDate: z.iso.date('Pick an end date'),
 });
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;
 
