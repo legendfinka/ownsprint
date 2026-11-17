@@ -67,6 +67,21 @@ describe('creating and editing tasks', () => {
     });
   });
 
+  it('takes the subtasks along when a task changes sprint', async () => {
+    const { token, project, url } = await setup();
+    const sprint = await createSprint(app, token, project.id);
+    const task = await createTask(app, token, project.id);
+    await createTask(app, token, project.id, { parentId: task.id });
+
+    await request(app).patch(`${url}/${task.id}`).set(auth(token)).send({ sprintId: sprint.id });
+    const inSprint = await request(app).get(`${url}/${task.id}`).set(auth(token));
+    expect((inSprint.body as TaskDetail).subtasks.map((s) => s.sprintId)).toEqual([sprint.id]);
+
+    await request(app).patch(`${url}/${task.id}`).set(auth(token)).send({ sprintId: null });
+    const backlog = await request(app).get(`${url}/${task.id}`).set(auth(token));
+    expect((backlog.body as TaskDetail).subtasks.map((s) => s.sprintId)).toEqual([null]);
+  });
+
   it('rejects an empty update', async () => {
     const { token, project, url } = await setup();
     const task = await createTask(app, token, project.id);

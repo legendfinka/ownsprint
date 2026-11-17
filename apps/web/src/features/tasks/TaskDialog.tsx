@@ -15,6 +15,7 @@ import { Window } from '@/components/Window';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AiAssistant } from '@/features/ai/AiAssistant';
+import { useSprints } from '@/features/board/queries';
 import { COLUMNS } from '@/features/board/reorder';
 import { useProject } from '@/features/projects/queries';
 import { errorMessage, useSchemaForm } from '@/lib/forms';
@@ -65,6 +66,7 @@ function TaskDetails({ projectId, taskId }: { projectId: string; taskId: string 
 function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }) {
   const [, openTask] = useTaskParam();
   const members = useProject(projectId).data?.members ?? [];
+  const sprints = useSprints(projectId).data ?? [];
   const update = useUpdateTask(projectId);
   const deleteTask = useDeleteTask(projectId);
   const save = (input: UpdateTaskInput) => update.mutate({ taskId: task.id, ...input });
@@ -151,11 +153,34 @@ function TaskFields({ projectId, task }: { projectId: string; task: TaskDetail }
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.name}
+                {member.title && ` · ${member.title}`}
               </option>
             ))}
           </Select>
         </Field>
       </div>
+
+      {/* A subtask follows its parent, so only top-level tasks pick a sprint. */}
+      {!task.parentId && (
+        <Field label="Sprint">
+          <Select
+            // The options arrive after the first render, so the count is part of the key.
+            key={`${task.sprintId}-${sprints.length}`}
+            defaultValue={task.sprintId ?? ''}
+            onChange={(e) => save({ sprintId: e.target.value || null })}
+          >
+            <option value="">Backlog</option>
+            {/* A completed sprint is closed: only shown when the task is already in it. */}
+            {sprints
+              .filter((s) => s.status !== 'completed' || s.id === task.sprintId)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+          </Select>
+        </Field>
+      )}
 
       <Field label="Description">
         <textarea

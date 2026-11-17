@@ -101,8 +101,15 @@ export function replaceSubtasks(parentId: string, data: Prisma.TaskCreateManyInp
   });
 }
 
+// Subtasks stay in the sprint of their parent, so a sprint change takes them along.
 export function update(taskId: string, data: Prisma.TaskUncheckedUpdateInput) {
-  return prisma.task.update({ where: { id: taskId }, data });
+  return prisma.$transaction(async (tx) => {
+    const task = await tx.task.update({ where: { id: taskId }, data });
+    if (data.sprintId !== undefined) {
+      await tx.task.updateMany({ where: { parentId: taskId }, data: { sprintId: data.sprintId } });
+    }
+    return task;
+  });
 }
 
 // Subtasks are deleted by the database (ON DELETE CASCADE).

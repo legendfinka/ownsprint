@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
-import type { ProjectDetail, TaskDetail } from '@ownsprint/shared';
+import type { ProjectDetail, Sprint, TaskDetail } from '@ownsprint/shared';
 import { makeTask } from '@/test/factories';
 import { TaskDialog } from './TaskDialog';
 
@@ -12,13 +12,38 @@ const project: ProjectDetail = {
   name: 'Project',
   role: 'owner',
   createdAt: '',
-  members: [{ id: 'u1', name: 'Ann', email: 'ann@example.com', role: 'owner' }],
+  members: [
+    {
+      id: 'u1',
+      name: 'Ann',
+      email: 'ann@example.com',
+      role: 'owner',
+      title: null,
+      avatarColor: null,
+      avatarEmoji: null,
+    },
+  ],
 };
 const task: TaskDetail = {
   ...makeTask('Write docs'),
   id: 't1',
   subtasks: [{ ...makeTask('Outline'), id: 's1', parentId: 't1' }],
 };
+
+const sprint = (id: string, name: string, status: Sprint['status']): Sprint => ({
+  id,
+  name,
+  status,
+  projectId: 'p',
+  startDate: '',
+  endDate: '',
+});
+// The task is in sprint "s".
+const sprints = [
+  sprint('s', 'Sprint 1', 'active'),
+  sprint('n', 'Sprint 2', 'planned'),
+  sprint('c', 'Old sprint', 'completed'),
+];
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 
@@ -28,6 +53,7 @@ function fakeApi() {
     if (init?.method === 'PATCH') return Promise.resolve(json(task));
     if (init?.method === 'DELETE') return Promise.resolve(new Response(null, { status: 204 }));
     if (url === '/api/projects/p') return Promise.resolve(json(project));
+    if (url === '/api/projects/p/sprints') return Promise.resolve(json({ sprints }));
     if (url === '/api/projects/p/tasks/t1') return Promise.resolve(json(task));
     return Promise.resolve(new Response('{}', { status: 404 }));
   });
@@ -75,6 +101,27 @@ describe('TaskDialog', () => {
 
     await waitFor(() =>
       expect(patches()).toEqual([['/api/projects/p/tasks/t1', { priority: 'high' }]]),
+    );
+  });
+
+  it('moves the task to another sprint or to the backlog', async () => {
+    const { patches } = fakeApi();
+    const user = renderDialog();
+    // The picker is rebuilt when the sprints arrive, so look it up each time.
+    const picker = () => screen.getByLabelText('Sprint');
+    await waitFor(() => expect(picker()).toHaveValue('s'));
+
+    // Completed sprints are closed, so they are not offered.
+    expect(within(picker()).queryByRole('option', { name: 'Old sprint' })).not.toBeInTheDocument();
+
+    await user.selectOptions(picker(), 'Sprint 2');
+    await user.selectOptions(picker(), 'Backlog');
+
+    await waitFor(() =>
+      expect(patches()).toEqual([
+        ['/api/projects/p/tasks/t1', { sprintId: 'n' }],
+        ['/api/projects/p/tasks/t1', { sprintId: null }],
+      ]),
     );
   });
 
