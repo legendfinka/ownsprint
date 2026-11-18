@@ -15,7 +15,7 @@ const project = (role: 'owner' | 'member'): ProjectDetail => ({
 
 function renderTitle(role: 'owner' | 'member') {
   const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
-    Promise.resolve(new Response(JSON.stringify({ id: 'p', name: 'Shop', role })))
+    Promise.resolve(new Response(JSON.stringify({ id: 'p', name: 'Shop', role }))),
   );
   vi.stubGlobal('fetch', fetchMock);
   render(
